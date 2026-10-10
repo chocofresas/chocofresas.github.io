@@ -626,7 +626,7 @@
       <div class="logo">🍓</div>
       <div class="login-emojis">🍓🍫🍦🍬🍯🥜</div>
       <h1>Fresa<em>Choco</em></h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">V1.2</span></p>
+      <p class="sub">Pedidos · Menú · Insumos · <span class="ver-app">V2.0</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -661,7 +661,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">FresaChoco · <span class="ver-app">V1.2</span></div>
+        <div class="gaveta-vers">FresaChoco · <span class="ver-app">V2.0</span></div>
       </div>
     </aside>
 
@@ -701,6 +701,7 @@ var S = {
   tasaManual: false,
   pagina: 'inicio',
   cacheProds: [],
+  cacheInsumos: [],
   errProds: '',
   categoriasExtra: []
 };
@@ -761,6 +762,16 @@ function pintar(html) { var c = el('contenido'); if (c) c.innerHTML = html; }
 // Los productos SIEMPRE se manejan como arreglo; prods() evita errores si la lista
 // llegara vacía o nula desde el servidor.
 function prods() { return Array.isArray(S.cacheProds) ? S.cacheProds : []; }
+// Igual para los insumos (materia prima).
+function insumos() { return Array.isArray(S.cacheInsumos) ? S.cacheInsumos : []; }
+// Receta de un producto normalizada a [{insumo, cantidad}].
+function recetaDe(p) {
+  var r = p && p.receta;
+  if (typeof r === 'string') { try { r = JSON.parse(r); } catch (e) { r = []; } }
+  if (!Array.isArray(r)) return [];
+  return r.map(function (x) { return { insumo: String((x && x.insumo) || '').trim(), cantidad: num(x && x.cantidad) }; })
+    .filter(function (x) { return x.insumo && x.cantidad > 0; });
+}
 // Emoji gráfico según el producto (fresas, chocolate, crema, chispas...).
 function emojiDeProducto(p) {
   var n = String((p && (p.nombre + ' ' + (p.categoria || ''))) || '').toLowerCase();
@@ -843,6 +854,21 @@ function cargarProductos() {
     return S.cacheProds;
   });
   return _promProd;
+}
+var _promIns = null;
+function cargarInsumos() {
+  if (_promIns) return _promIns;
+  _promIns = API.listarInsumos().then(function (r) {
+    if (Array.isArray(r)) { S.cacheInsumos = r; S.errInsumos = ''; }
+    else { S.cacheInsumos = []; S.errInsumos = 'El servidor respondió sin la lista de insumos.'; }
+    return S.cacheInsumos;
+  }).catch(function (e) {
+    if (!Array.isArray(S.cacheInsumos)) S.cacheInsumos = [];
+    S.errInsumos = (e && e.message) || 'No se pudieron cargar los insumos. Revisa tu conexión.';
+    _promIns = null;
+    return S.cacheInsumos;
+  });
+  return _promIns;
 }
 /* ---------- Mini-caché local (acelera el cambio de pestañas) ----------
    Guarda copias de lo último que pidió cada pantalla y las reutiliza para
@@ -1100,7 +1126,13 @@ var API = {
   marcarEnMenu: function (codigo, enMenu) { return apiGrabar('marcarEnMenu', [S.tok, codigo, enMenu], ['productos']); },
   listarPedidos: function () { return apiLlamada('listarPedidos', [S.tok]); },
   crearPedidoManual: function (d) { return apiGrabar('crearPedidoManual', [S.tok, d], ['pedidos']); },
-  marcarPedidoDespachado: function (id) { return apiGrabar('marcarPedidoDespachado', [S.tok, id], ['pedidos']); }
+  marcarPedidoDespachado: function (id) { return apiGrabar('marcarPedidoDespachado', [S.tok, id], ['pedidos', 'dashboard', 'insumos']); },
+  eliminarProducto: function (c) { return apiGrabar('eliminarProducto', [S.tok, c], ['productos', 'dashboard']); },
+  // --- Insumos (materia prima) ---
+  listarInsumos: function () { return apiLlamada('listarInsumos', [S.tok]); },
+  guardarInsumo: function (i) { return apiGrabar('guardarInsumo', [S.tok, i], ['insumos', 'dashboard']); },
+  ajustarStockInsumo: function (c, q, m) { return apiGrabar('ajustarStockInsumo', [S.tok, c, q, m], ['insumos', 'dashboard']); },
+  eliminarInsumo: function (c) { return apiGrabar('eliminarInsumo', [S.tok, c], ['insumos', 'dashboard']); }
 };
 
 // Las escrituras borran la caché local de lo que cambian, para que la siguiente
@@ -1109,6 +1141,7 @@ function apiGrabar(fn, args, claves) {
   return apiLlamada(fn, args).then(function (r) {
     invalidarCache.apply(null, claves);
     if (claves.indexOf('productos') >= 0) _promProd = null; // el inventario cambió: recargar
+    if (claves.indexOf('insumos') >= 0) _promIns = null;     // los insumos cambiaron: recargar
     return r;
   });
 }
@@ -1180,6 +1213,11 @@ function mockApi(fn, args) {
     { codigo: 'FC-003', nombre: 'Chispas de Colores', categoria: 'Chispas de Colores', precio_usd: 3, costo_usd: 1.2, stock: 50, stock_min: 12, activo: 1, imagen: '', descripcion: 'Vasito de chispas de colores surtidas.', en_menu: 1, creado: '2026-08-15' },
     { codigo: 'FC-004', nombre: 'Dandys', categoria: 'Dandys', precio_usd: 2.5, costo_usd: 1, stock: 4, stock_min: 6, activo: 1, imagen: '', descripcion: 'Dandy cubierto de chocolate.', en_menu: 1, creado: '2026-07-10' }
   ];
+  var insumosMock = [
+    { codigo: 'INS-FRESA', nombre: 'Fresas', unidad: 'kg', stock: 12, stock_min: 4, costo_usd: 3.5, activo: 1, creado: '2026-09-01' },
+    { codigo: 'INS-CHOCO', nombre: 'Chocolate de cobertura', unidad: 'kg', stock: 8, stock_min: 3, costo_usd: 6, activo: 1, creado: '2026-09-01' },
+    { codigo: 'INS-CREMA', nombre: 'Crema chantillí', unidad: 'litro', stock: 2, stock_min: 2, costo_usd: 4, activo: 1, creado: '2026-09-01' }
+  ];
   var map = {
     login: function () { return { ok: true, token: 'demo', usuario: 'admin', nombre: 'Administrador (Demo)', rol: 'admin' }; },
     getDashboard: function () {
@@ -1189,8 +1227,9 @@ function mockApi(fn, args) {
         ventasMes: { cantidad: 310, usd: 21590, ves: 18427350 },
         gastosMes: { cantidad: 8, usd: 1250 },
         sueldosPendientes: 2,
-        stockBajo: [prods[1], prods[3]],
-        totalProductos: prods.length
+        stockBajo: [insumosMock[2]],
+        totalProductos: prods.length,
+        totalInsumos: insumosMock.length
       };
     },
     getTasaVigente: function () { return tasaMock; },
@@ -1219,7 +1258,12 @@ function mockApi(fn, args) {
       ];
     },
     crearPedidoManual: function () { return { ok: true, pedido: { id: 'P9', numero: '0009', total_usd: 5, total_ves: 4267.5, tasa: 853.5 } }; },
-    marcarPedidoDespachado: function () { return { ok: true }; }
+    marcarPedidoDespachado: function () { return { ok: true }; },
+    eliminarProducto: function () { return { ok: true }; },
+    listarInsumos: function () { return insumosMock; },
+    guardarInsumo: function () { return insumosMock[0]; },
+    ajustarStockInsumo: function () { return insumosMock[0]; },
+    eliminarInsumo: function () { return { ok: true }; }
   };
   var f = map[fn];
   if (!f) return Promise.resolve({ ok: true });
@@ -1757,11 +1801,9 @@ document.addEventListener('keydown', function (ev) {
 /* ---------- Menú / navegación ---------- */
 var PAGINAS = [
   { id: 'inicio', etq: 'Inicio', icono: '🏠', admin: false },
-  { id: 'vender', etq: 'Vender', icono: '🛒', admin: false },
-  { id: 'productos', etq: 'Inventario', icono: '🍓', admin: false },
-  { id: 'menu', etq: 'Menú', icono: '📖', admin: true },
   { id: 'pedidos', etq: 'Pedidos', icono: '🛎️', admin: false },
-  { id: 'ventas', etq: 'Ventas', icono: '🧾', admin: false },
+  { id: 'menu', etq: 'Menú', icono: '📖', admin: true },
+  { id: 'insumos', etq: 'Insumos', icono: '📦', admin: false },
   { id: 'reportes', etq: 'Reportes', icono: '📊', admin: true },
   { id: 'gastos', etq: 'Gastos', icono: '💸', admin: true },
   { id: 'nomina', etq: 'Nómina', icono: '👥', admin: true },
@@ -1927,8 +1969,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'V1.2' && window.__avisar) {
-        window.__avisar('La página es V1.2, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.2).', true);
+      if (sv && sv.version && sv.version !== 'V2.0' && window.__avisar) {
+        window.__avisar('La página es V2.0, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir V2.0).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -1991,18 +2033,18 @@ render.inicio = async function () {
       '<div class="k-azul" style="font-size:19px;font-weight:800">Bs ' + fmtNum(num(d.tasa && d.tasa.tasa)) + ' / $</div>' +
       '</div></div>' +
       '<div class="grid-cards" style="margin-top:14px">' +
-      kpi('💵 Ventas de hoy', fmtUSD(d.ventasHoy.usd), fmtVES(d.ventasHoy.ves), d.ventasHoy.cantidad + ' ventas', 'k-verde', 'ventas') +
-      kpi('📈 Ventas del mes', fmtUSD(d.ventasMes.usd), fmtVES(d.ventasMes.ves), d.ventasMes.cantidad + ' ventas', 'k-azul', 'ventas') +
+      kpi('💵 Ventas de hoy', fmtUSD(d.ventasHoy.usd), fmtVES(d.ventasHoy.ves), d.ventasHoy.cantidad + ' pedidos', 'k-verde', 'pedidos') +
+      kpi('📈 Ventas del mes', fmtUSD(d.ventasMes.usd), fmtVES(d.ventasMes.ves), d.ventasMes.cantidad + ' pedidos', 'k-azul', 'reportes') +
       kpi('💸 Gastos del mes', fmtUSD(d.gastosMes.usd), fmtVES(d.gastosMes.usd * (S.tasa || 0)), d.gastosMes.cantidad + ' registros', 'k-rojo', 'gastos') +
       kpi('💰 Sueldos pendientes', String(d.sueldosPendientes), 'de este mes', '', 'k-naranja', 'nomina') +
-      kpi('📦 Productos', String(d.totalProductos), 'activos', (d.stockBajo && d.stockBajo.length) + ' bajo el mínimo', 'k-azul', 'productos') +
-      kpi('🛒 Vender ahora', 'Abrir POS', 'escanea y cobra', '', 'k-verde', 'vender') +
+      kpi('📖 Productos del menú', String(d.totalProductos), 'activos', '', 'k-azul', 'menu') +
+      kpi('📦 Insumos', String(d.totalInsumos || 0), 'materia prima', (d.stockBajo && d.stockBajo.length) + ' bajo el mínimo', 'k-naranja', 'insumos') +
       '</div>' +
-      (sb.length ? '<div class="tarjeta"><h2>🔺 Stock bajo</h2><div class="detalle-venta">' +
+      (sb.length ? '<div class="tarjeta"><h2>🔺 Insumos con stock bajo</h2><div class="detalle-venta">' +
         sb.map(function (p) {
-          return '<div class="d-lin"><span>' + emojiDeProducto(p) + ' ' + esc(p.nombre) + '</span><span class="baja">' + fmtCant(p.stock) + ' / ' + fmtCant(p.stock_min) + '</span></div>';
+          return '<div class="d-lin"><span>📦 ' + esc(p.nombre) + '</span><span class="baja">' + fmtCant(p.stock) + ' / ' + fmtCant(p.stock_min) + '</span></div>';
         }).join('') +
-        '</div><div class="fila-botones"><button class="btn" data-ir="productos">Ir al inventario</button></div></div>' : '')
+        '</div><div class="fila-botones"><button class="btn" data-ir="insumos">Ir a insumos</button></div></div>' : '')
     );
     Array.prototype.forEach.call(document.querySelectorAll('#contenido [data-ir]'), function (btn) {
       btn.addEventListener('click', function () { irA(btn.getAttribute('data-ir')); });
@@ -2519,6 +2561,14 @@ function refrescarInventarioTrasCategorias() {
   pintarTablaProductos(el('prod-bus') ? el('prod-bus').value : '', el('prod-cat').value);
 }
 
+// Redibuja la lista de productos donde esté abierta (pantalla Menú o Inventario).
+function refrescarListaProductos() {
+  if (el('mn-grid')) { pintarGridMenu(el('mn-bus') ? el('mn-bus').value : ''); return; }
+  if (el('prod-bus') || el('prod-cat')) {
+    pintarTablaProductos(el('prod-bus') ? el('prod-bus').value : '', el('prod-cat') ? el('prod-cat').value : '');
+  }
+}
+
 function formularioProducto(prod) {
   var ed = !!(prod && prod.codigo);
   var p = prod || { codigo: '', nombre: '', categoria: 'General', precio_usd: '', costo_usd: '', stock: 0, stock_min: 0, activo: 1, imagen: '', descripcion: '', en_menu: 1 };
@@ -2537,8 +2587,6 @@ function formularioProducto(prod) {
     '<div class="form-2col">' +
     '<div><label class="campo">Precio ($)</label><input id="f-precio" type="number" step="0.01" min="0" value="' + esc(p.precio_usd) + '"></div>' +
     '<div><label class="campo">Costo ($)</label><input id="f-costo" type="number" step="0.01" min="0" value="' + esc(p.costo_usd || '') + '"></div>' +
-    '<div><label class="campo">Stock inicial</label><input id="f-stock" type="number" min="0" value="' + esc(p.stock) + '"' + (ed ? ' disabled' : '') + '></div>' +
-    '<div><label class="campo">Stock mínimo</label><input id="f-min" type="number" min="0" value="' + esc(p.stock_min || 0) + '"></div>' +
     '</div>' +
     '<label class="campo">📖 Menú público — foto y detalles</label>' +
     '<input id="f-foto" placeholder="Enlace (URL) de la foto o usa el botón…" value="' + esc(textoFoto) + '" autocomplete="off">' +
@@ -2549,10 +2597,14 @@ function formularioProducto(prod) {
     '<input type="file" id="f-foto-file" accept="image/*" style="display:none">' +
     '<div id="f-foto-prev" class="foto-prev"></div>' +
     '<textarea id="f-desc" rows="2" placeholder="Descripción para el cliente (ej.: fresas frescas con chocolate oscuro y topping de chispas)…" style="margin-top:8px">' + esc(p.descripcion || '') + '</textarea>' +
+    '<label class="campo" style="margin-top:10px">🔧 Receta — insumos que consume (por cada unidad vendida)</label>' +
+    '<div id="f-receta"></div>' +
+    '<button class="btn btn-suave" id="f-rec-add" type="button" style="margin-top:6px">＋ Agregar insumo</button>' +
     '<label class="campo"><input type="checkbox" id="f-menu" style="width:auto"' + (enMenu ? ' checked' : '') + '> Mostrar en el menú público (QR)</label>' +
     '<label class="campo"><input type="checkbox" id="f-activo" style="width:auto"' + (String(p.activo) !== '0' ? ' checked' : '') + '> Activo</label>' +
     '<div id="f-error" class="aviso aviso-error" style="display:none;margin-top:10px"></div>' +
     '<div class="modal-acciones">' +
+    (ed ? '<button class="btn btn-peligro" id="f-eliminar" type="button">🗑 Eliminar</button>' : '') +
     '<button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
     '<button class="btn btn-primario" id="f-guardar">' + (ed ? 'Guardar cambios' : 'Crear producto') + '</button></div>'
   );
@@ -2561,6 +2613,44 @@ function formularioProducto(prod) {
       abrirScanner(function (c) { el('f-cod').value = c; });
     });
   }
+  // --- Receta: insumos que consume este producto (por unidad vendida) ---
+  var receta = recetaDe(p).slice();
+  function pintarReceta() {
+    var box = el('f-receta');
+    if (!box) return;
+    if (!receta.length) {
+      box.innerHTML = '<div class="muted" style="padding:4px 0">Sin insumos. Este producto no descuenta materia prima.</div>';
+      return;
+    }
+    if (!insumos().length) {
+      box.innerHTML = '<div class="muted" style="padding:4px 0">No hay insumos cargados. Créalos en la pestaña 📦 Insumos.</div>';
+      return;
+    }
+    box.innerHTML = receta.map(function (r, i) {
+      var opts = '<option value="">— insumo —</option>' + insumos().map(function (ins) {
+        return '<option value="' + esc(ins.codigo) + '"' + (String(ins.codigo) === String(r.insumo) ? ' selected' : '') + '>' + esc(ins.nombre) + ' (' + esc(ins.unidad || 'u') + ')</option>';
+      }).join('');
+      return '<div class="fila-botones" style="align-items:center;margin-bottom:6px">' +
+        '<select data-rec-ins="' + i + '" style="flex:1">' + opts + '</select>' +
+        '<input data-rec-cant="' + i + '" type="number" min="0" step="0.0001" value="' + r.cantidad + '" style="width:96px" placeholder="cant.">' +
+        '<button class="btn btn-suave" data-rec-del="' + i + '" type="button">🗑</button>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('[data-rec-ins]'), function (s) {
+      s.addEventListener('change', function () { receta[num(this.getAttribute('data-rec-ins'))].insumo = this.value; });
+    });
+    Array.prototype.forEach.call(box.querySelectorAll('[data-rec-cant]'), function (inp) {
+      inp.addEventListener('input', function () { receta[num(this.getAttribute('data-rec-cant'))].cantidad = num(this.value); });
+    });
+    Array.prototype.forEach.call(box.querySelectorAll('[data-rec-del]'), function (b) {
+      b.addEventListener('click', function () { receta.splice(num(this.getAttribute('data-rec-del')), 1); pintarReceta(); });
+    });
+  }
+  pintarReceta();
+  el('f-rec-add').addEventListener('click', function () {
+    receta.push({ insumo: insumos().length ? String(insumos()[0].codigo) : '', cantidad: 1 });
+    pintarReceta();
+  });
   // --- Foto del producto (menú) ---
   var prevBox = el('f-foto-prev');
   function pintarPrev(url) {
@@ -2604,6 +2694,17 @@ function formularioProducto(prod) {
       btn.disabled = false; btn.textContent = prevTxt;
     }
   });
+  if (ed) el('f-eliminar').addEventListener('click', async function () {
+    var nom = p.nombre || p.codigo;
+    if (!confirm('¿Eliminar el producto «' + nom + '»?\n\nDesaparecerá del menú. Los pedidos ya hechos no se pierden (guardan su nombre y precio).')) return;
+    try {
+      await API.eliminarProducto(p.codigo);
+      toast('Producto eliminado 🗑', 'ok');
+      cerrarModal();
+      await cargarProductos();
+      refrescarListaProductos();
+    } catch (e) { toast((e && e.message) || 'No se pudo eliminar', 'error'); }
+  });
   el('f-guardar').addEventListener('click', async function () {
     var errBox = el('f-error');
     if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
@@ -2614,9 +2715,8 @@ function formularioProducto(prod) {
         categoria: el('f-cat').value.trim(),
         precio_usd: num(el('f-precio').value),
         costo_usd: num(el('f-costo').value),
-        stock: ed ? num(p.stock) : num(el('f-stock').value),
-        stock_min: num(el('f-min').value),
         descripcion: el('f-desc').value.trim(),
+        receta: receta.filter(function (x) { return x.insumo && num(x.cantidad) > 0; }),
         en_menu: el('f-menu').checked ? 1 : 0,
         activo: el('f-activo').checked ? 1 : 0
       };
@@ -2641,16 +2741,15 @@ function formularioProducto(prod) {
       toast(ed ? 'Producto actualizado' : 'Producto creado', 'ok');
       cerrarModal();
       await cargarProductos();
-      var bus = el('prod-bus');
-      pintarTablaProductos(bus ? bus.value : '', el('prod-cat') ? el('prod-cat').value : '');
+      refrescarListaProductos();
       if (!r && window.__avisar) {
         (function () {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.2 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir V2.0 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir V1.2).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir V2.0).');
           });
         })();
       }
@@ -3571,6 +3670,7 @@ function imprimirQRMenu() {
 render.menu = async function () {
   if (S.rol !== 'admin') { pinError('Solo el administrador puede editar el menú.'); return; }
   if (!prods().length) await cargarProductos();
+  if (!insumos().length) { try { await cargarInsumos(); } catch (e) {} }
   pintar(
     '<div class="tarjeta qr-caja">' +
       '<h2>📖 Menú para tus clientes</h2>' +
@@ -3588,6 +3688,11 @@ render.menu = async function () {
         '</div>' +
       '</div>' +
     '</div>' +
+    '<div class="fila-botones" style="margin:8px 0 4px">' +
+      '<button class="btn btn-primario" id="mn-nuevo">＋ Nuevo producto</button>' +
+      '<button class="btn" id="mn-reload">↻ Recargar</button>' +
+    '</div>' +
+    '<p class="muted" style="margin:0 0 8px;font-size:12.5px">Agrega, edita o elimina productos del menú. Para el <b>stock de materia prima</b>, usa la pestaña 📦 Insumos.</p>' +
     '<div class="buscador"><input id="mn-bus" placeholder="Buscar producto…" autocomplete="off"></div>' +
     '<div id="mn-resumen" class="muted" style="margin:0 0 8px"></div>' +
     '<div id="mn-grid" class="menu-grid"></div>'
@@ -3596,6 +3701,12 @@ render.menu = async function () {
   el('mn-copiar').addEventListener('click', function () { copiarTexto(URL_MENU); });
   el('mn-print').addEventListener('click', imprimirQRMenu);
   el('mn-bus').addEventListener('input', function () { pintarGridMenu(this.value); });
+  el('mn-nuevo').addEventListener('click', function () { formularioProducto(null); });
+  el('mn-reload').addEventListener('click', async function () {
+    _promProd = null; await cargarProductos();
+    pintarGridMenu(el('mn-bus') ? el('mn-bus').value : '');
+    toast('Menú recargado', 'ok');
+  });
   pintarGridMenu('');
 };
 
@@ -3623,6 +3734,7 @@ function pintarGridMenu(q) {
         '<div class="mc-acc">' +
           '<button class="btn btn-suave" data-mn-edit="' + esc(p.codigo) + '">✏️ Foto y detalles</button>' +
           '<button class="btn' + (visible ? ' btn-suave' : ' btn-primario') + '" data-mn-toggle="' + esc(p.codigo) + '" data-est="' + (visible ? 0 : 1) + '">' + (visible ? '🙈 Ocultar' : '👁 Agregar') + '</button>' +
+          '<button class="btn btn-suave" data-mn-del="' + esc(p.codigo) + '" title="Eliminar producto">🗑</button>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -3649,6 +3761,201 @@ function pintarGridMenu(q) {
       } catch (e) { toast((e && e.message) || 'No se pudo cambiar', 'error'); b.disabled = false; }
     });
   });
+  Array.prototype.forEach.call(grid.querySelectorAll('[data-mn-del]'), function (b) {
+    b.addEventListener('click', async function () {
+      var cod = b.getAttribute('data-mn-del');
+      var p = prods().find(function (x) { return String(x.codigo) === cod; });
+      if (!confirm('¿Eliminar «' + ((p && p.nombre) || cod) + '» del menú?\n\nDesaparece del menú y del inventario de productos. Los pedidos ya hechos no se pierden.')) return;
+      b.disabled = true;
+      try {
+        await API.eliminarProducto(cod);
+        await cargarProductos();
+        pintarGridMenu(el('mn-bus') ? el('mn-bus').value : '');
+        toast('Producto eliminado 🗑', 'ok');
+      } catch (e) { toast((e && e.message) || 'No se pudo eliminar', 'error'); b.disabled = false; }
+    });
+  });
+}
+
+/* ============================================================
+   PANTALLA: INSUMOS — materia prima (fresas, chocolate, crema…)
+   ============================================================ */
+render.insumos = async function () {
+  _promIns = null;
+  await cargarInsumos();
+  var esAdmin = S.rol === 'admin';
+  pintar(
+    '<div class="fila-botones" style="margin:0 0 8px">' +
+      (esAdmin ? '<button class="btn btn-primario" id="ins-nuevo">＋ Nuevo insumo</button>' : '') +
+      '<button class="btn" id="ins-reload">↻ Recargar</button>' +
+    '</div>' +
+    '<p class="muted" style="margin:0 0 10px">Materia prima del negocio. Al <b>despachar un pedido</b> se descuenta sola la cantidad que indique la receta de cada producto (se define en 📖 Menú).</p>' +
+    '<div class="buscador"><input id="ins-bus" placeholder="Filtrar insumos…" autocomplete="off"></div>' +
+    '<div id="ins-resumen" class="muted" style="margin:0 0 8px"></div>' +
+    '<div id="ins-tabla"></div>'
+  );
+  if (esAdmin) el('ins-nuevo').addEventListener('click', function () { formularioInsumo(null); });
+  el('ins-reload').addEventListener('click', async function () {
+    _promIns = null; await cargarInsumos();
+    pintarTablaInsumos(el('ins-bus') ? el('ins-bus').value : '');
+    toast('Insumos recargados', 'ok');
+  });
+  el('ins-bus').addEventListener('input', function () { pintarTablaInsumos(this.value); });
+  pintarTablaInsumos('');
+};
+
+function pintarTablaInsumos(q) {
+  var cont = el('ins-tabla');
+  if (!cont) return;
+  if (S.errInsumos) {
+    cont.innerHTML = '<div class="tarjeta" style="border-left:4px solid #c62828"><b>⚠️ No se pudieron cargar los insumos:</b> ' + esc(S.errInsumos) + '</div>';
+    return;
+  }
+  var ql = (q || '').trim().toLowerCase();
+  var lista = insumos().filter(function (i) {
+    return !ql || String(i.nombre).toLowerCase().indexOf(ql) >= 0 || String(i.codigo).toLowerCase().indexOf(ql) >= 0;
+  });
+  var res = el('ins-resumen');
+  if (res) res.textContent = lista.length + ' insumo' + (lista.length === 1 ? '' : 's');
+  if (!lista.length) {
+    cont.innerHTML = '<div class="tarjeta muted">No hay insumos.' + (S.rol === 'admin' ? ' Toca «＋ Nuevo insumo» para crear el primero (ej.: Fresas, Chocolate, Crema de leche).' : '') + '</div>';
+    return;
+  }
+  var esAdmin = S.rol === 'admin';
+  cont.innerHTML = '<div class="tabla-envoltura"><table class="tabla"><thead><tr>' +
+    '<th>Código</th><th>Insumo</th><th>Unidad</th><th class="der">Stock</th><th class="der">Mín.</th><th class="der">Costo $</th>' + (esAdmin ? '<th>Acciones</th>' : '') +
+    '</tr></thead><tbody>' +
+    lista.map(function (i) {
+      var stock = num(i.stock), min = num(i.stock_min);
+      var activo = String(i.activo) !== '0';
+      var baja = activo && stock <= min;
+      var acc = esAdmin
+        ? '<button class="btn btn-suave" style="padding:6px 10px" data-ins-aj="' + esc(i.codigo) + '">±Stock</button> ' +
+          '<button class="btn" style="padding:6px 10px" data-ins-edit="' + esc(i.codigo) + '">✏️</button> ' +
+          '<button class="btn btn-suave" style="padding:6px 10px" data-ins-del="' + esc(i.codigo) + '" title="Eliminar">🗑</button>'
+        : '';
+      return '<tr' + (activo ? '' : ' style="opacity:.45"') + '>' +
+        '<td class="mono">' + esc(i.codigo) + '</td>' +
+        '<td>' + esc(i.nombre) + (activo ? '' : '<br><small class="muted">Inactivo</small>') + '</td>' +
+        '<td>' + esc(i.unidad || 'u') + '</td>' +
+        '<td class="der' + (baja ? ' baja' : '') + '">' + fmtCant(stock) + (baja ? ' ⚠️' : '') + '</td>' +
+        '<td class="der muted">' + fmtCant(min) + '</td>' +
+        '<td class="der">' + fmtUSD(i.costo_usd) + '</td>' +
+        (esAdmin ? '<td>' + acc + '</td>' : '') +
+        '</tr>';
+    }).join('') +
+    '</tbody></table></div>';
+  Array.prototype.forEach.call(cont.querySelectorAll('[data-ins-aj]'), function (b) {
+    b.addEventListener('click', function () { formularioStockInsumo(b.getAttribute('data-ins-aj')); });
+  });
+  Array.prototype.forEach.call(cont.querySelectorAll('[data-ins-edit]'), function (b) {
+    b.addEventListener('click', function () {
+      var cod = b.getAttribute('data-ins-edit');
+      formularioInsumo(insumos().find(function (x) { return String(x.codigo) === cod; }));
+    });
+  });
+  Array.prototype.forEach.call(cont.querySelectorAll('[data-ins-del]'), function (b) {
+    b.addEventListener('click', async function () {
+      var cod = b.getAttribute('data-ins-del');
+      var ins = insumos().find(function (x) { return String(x.codigo) === cod; });
+      if (!confirm('¿Eliminar el insumo «' + ((ins && ins.nombre) || cod) + '»?')) return;
+      b.disabled = true;
+      try {
+        await API.eliminarInsumo(cod);
+        await cargarInsumos();
+        pintarTablaInsumos(el('ins-bus') ? el('ins-bus').value : '');
+        toast('Insumo eliminado 🗑', 'ok');
+      } catch (e) { toast((e && e.message) || 'No se pudo eliminar', 'error'); b.disabled = false; }
+    });
+  });
+}
+
+function formularioInsumo(ins) {
+  var ed = !!(ins && ins.codigo);
+  var i = ins || { codigo: '', nombre: '', unidad: 'unidad', stock: 0, stock_min: 0, costo_usd: '', activo: 1 };
+  var unidades = ['unidad', 'kg', 'g', 'litro', 'ml', 'caja', 'paquete', 'docena'];
+  abrirModal(
+    '<div class="modal-tope"><h3>' + (ed ? 'Editar insumo' : 'Nuevo insumo') + '</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+    '<label class="campo">Código</label><input id="i-cod" value="' + esc(i.codigo) + '"' + (ed ? ' disabled' : '') + ' placeholder="ej: INS-FRESA">' +
+    '<label class="campo">Nombre</label><input id="i-nom" value="' + esc(i.nombre) + '" placeholder="ej: Fresas">' +
+    '<label class="campo">Unidad de medida</label>' +
+    '<input id="i-uni" list="lst-uni" value="' + esc(i.unidad || 'unidad') + '">' +
+    '<datalist id="lst-uni">' + unidades.map(function (u) { return '<option value="' + u + '">'; }).join('') + '</datalist>' +
+    '<div class="form-2col">' +
+    '<div><label class="campo">Stock actual</label><input id="i-stock" type="number" step="0.0001" value="' + esc(i.stock) + '"></div>' +
+    '<div><label class="campo">Stock mínimo</label><input id="i-min" type="number" step="0.0001" value="' + esc(i.stock_min || 0) + '"></div>' +
+    '<div><label class="campo">Costo ($) por unidad</label><input id="i-costo" type="number" step="0.01" min="0" value="' + esc(i.costo_usd || '') + '"></div>' +
+    '</div>' +
+    '<label class="campo"><input type="checkbox" id="i-activo" style="width:auto"' + (String(i.activo) !== '0' ? ' checked' : '') + '> Activo</label>' +
+    '<div id="i-error" class="aviso aviso-error" style="display:none;margin-top:10px"></div>' +
+    '<div class="modal-acciones">' +
+    '<button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
+    '<button class="btn btn-primario" id="i-guardar">' + (ed ? 'Guardar cambios' : 'Crear insumo') + '</button></div>'
+  );
+  el('i-guardar').addEventListener('click', async function () {
+    var errBox = el('i-error');
+    if (errBox) { errBox.style.display = 'none'; }
+    try {
+      var datos = {
+        codigo: (ed ? i.codigo : el('i-cod').value).trim(),
+        nombre: el('i-nom').value.trim(),
+        unidad: el('i-uni').value.trim() || 'unidad',
+        stock: num(el('i-stock').value),
+        stock_min: num(el('i-min').value),
+        costo_usd: num(el('i-costo').value),
+        activo: el('i-activo').checked ? 1 : 0
+      };
+      if (!datos.codigo || !datos.nombre) throw new Error('El código y el nombre son obligatorios.');
+      await API.guardarInsumo(datos);
+      toast(ed ? 'Insumo actualizado' : 'Insumo creado', 'ok');
+      cerrarModal();
+      await cargarInsumos();
+      pintarTablaInsumos(el('ins-bus') ? el('ins-bus').value : '');
+    } catch (e) {
+      var M = (e && e.message) || 'No se pudo guardar.';
+      if (errBox) { errBox.textContent = '⚠️ ' + M; errBox.style.display = 'block'; }
+      toast(M, 'error');
+    }
+  });
+}
+
+function formularioStockInsumo(codigo) {
+  var i = insumos().find(function (x) { return String(x.codigo) === String(codigo); });
+  if (!i) { toast('Insumo no encontrado', 'error'); return; }
+  abrirModal(
+    '<div class="modal-tope"><h3>Ajustar stock — ' + esc(i.nombre) + '</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+    '<p class="muted">Stock actual: <b>' + fmtCant(i.stock) + ' ' + esc(i.unidad || 'u') + '</b></p>' +
+    '<label class="campo">Tipo de movimiento</label>' +
+    '<select id="is-mov"><option value="1">➕ Entrada (compra)</option><option value="-1">➖ Salida (consumo/merma)</option><option value="set">🟰 Fijar stock</option></select>' +
+    '<label class="campo">Cantidad</label><input id="is-cant" type="number" step="0.0001" min="0" value="">' +
+    '<label class="campo">Motivo (opcional)</label><input id="is-mot" value="">' +
+    '<div id="is-error" class="aviso aviso-error" style="display:none;margin-top:10px"></div>' +
+    '<div class="modal-acciones">' +
+    '<button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
+    '<button class="btn btn-primario" id="is-guardar">Aplicar</button></div>'
+  );
+  el('is-guardar').addEventListener('click', async function () {
+    var errBox = el('is-error');
+    if (errBox) errBox.style.display = 'none';
+    try {
+      var mov = el('is-mov').value;
+      var cant = num(el('is-cant').value);
+      if (mov === 'set') {
+        await API.ajustarStockInsumo(i.codigo, cant - num(i.stock), el('is-mot').value.trim() || 'ajuste manual');
+      } else {
+        if (cant <= 0) throw new Error('Indica una cantidad mayor que cero.');
+        await API.ajustarStockInsumo(i.codigo, num(mov) * cant, el('is-mot').value.trim() || 'ajuste manual');
+      }
+      toast('Stock ajustado', 'ok');
+      cerrarModal();
+      await cargarInsumos();
+      pintarTablaInsumos(el('ins-bus') ? el('ins-bus').value : '');
+    } catch (e) {
+      var M = (e && e.message) || 'No se pudo ajustar.';
+      if (errBox) { errBox.textContent = '⚠️ ' + M; errBox.style.display = 'block'; }
+      toast(M, 'error');
+    }
+  });
 }
 
 /* ============================================================
@@ -3663,7 +3970,7 @@ render.pedidos = async function () {
       '<button class="btn btn-primario" id="ped-nuevo">＋ Tomar pedido</button>' +
       '<button class="btn" id="ped-reload">↻ Recargar</button>' +
     '</div>' +
-    '<p class="muted" id="ped-act" style="margin:0 0 10px">Los pedidos se muestran por orden de llegada y se actualizan solos cada 20 s.</p>' +
+    '<p class="muted" id="ped-act" style="margin:0 0 10px">Los pedidos se muestran por orden de llegada y se actualizan solos cada 20 s. Al <b>despachar</b> se registra la venta y se descuentan los insumos (materia prima) según la receta.</p>' +
     '<div id="ped-lista"><div class="cargando">Cargando pedidos…</div></div>'
   );
   el('ped-nuevo').addEventListener('click', formularioPedido);
@@ -3709,7 +4016,7 @@ function pintarPedidos(lista) {
       b.disabled = true;
       try {
         await API.marcarPedidoDespachado(id);
-        toast('Pedido despachado ✅', 'ok');
+        toast('Despachado ✅ · venta registrada y stock de insumos descontado', 'ok');
         await cargarPedidos();
       } catch (e) { toast((e && e.message) || 'No se pudo marcar', 'error'); b.disabled = false; }
     });
@@ -3745,7 +4052,7 @@ function cardPedido(p) {
       '<span class="ped-tot">' + fmtUSD(p.total_usd) + ' <small class="muted">/ ' + fmtVES(p.total_ves) + '</small></span>' +
       (desp
         ? '<span class="muted" style="font-size:12px">Entregado ' + (p.entregado_el ? fechaHora(p.entregado_el) : '') + '</span>'
-        : '<button class="btn btn-primario" data-ped-desp="' + esc(p.id) + '">✓ Marcar despachado</button>') +
+        : '<button class="btn btn-primario" data-ped-desp="' + esc(p.id) + '">✓ Despachar (venta)</button>') +
     '</div>' +
   '</div>';
 }
@@ -3786,7 +4093,8 @@ function formularioPedido() {
     '<div id="pedc-error" class="aviso aviso-error" style="display:none;margin-top:10px"></div>' +
     '<div class="modal-acciones">' +
       '<button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
-      '<button class="btn btn-primario" id="pedc-go">Registrar pedido</button>' +
+      '<button class="btn" id="pedc-go">Registrar pedido (pendiente)</button>' +
+      '<button class="btn btn-primario" id="pedc-go-desp">✓ Cobrar y despachar</button>' +
     '</div>'
   );
   var _pedModo = 'llevar', _pedPago = 'pago_movil';
@@ -3859,12 +4167,14 @@ function formularioPedido() {
     pintarCarro();
   }
   el('pedc-bus').addEventListener('input', pintarLista);
-  el('pedc-go').addEventListener('click', async function () {
+  async function registrarPedido(despachar) {
     var err = el('pedc-error'); err.style.display = 'none';
     var nom = (el('pedc-nom').value || '').trim();
     if (!nom) { err.textContent = 'Escribe el nombre del cliente.'; err.style.display = 'block'; return; }
     if (!_pedCarrito.length) { err.textContent = 'Agrega al menos un producto.'; err.style.display = 'block'; return; }
-    var btn = el('pedc-go'); btn.disabled = true;
+    var btn = despachar ? el('pedc-go-desp') : el('pedc-go');
+    var otro = despachar ? el('pedc-go') : el('pedc-go-desp');
+    btn.disabled = true; if (otro) otro.disabled = true;
     try {
       var r = await API.crearPedidoManual({
         cliente: { nombre: nom, telefono: (el('pedc-tel').value || '').trim() },
@@ -3874,16 +4184,24 @@ function formularioPedido() {
         referencia: (_pedPago === 'pago_movil') ? (el('pedc-ref').value || '').trim() : '',
         items: _pedCarrito.map(function (l) { return { codigo: l.codigo, cantidad: l.cantidad }; })
       });
-      cerrarModal();
+      var id = r && r.pedido && r.pedido.id;
       var nro = (r && r.pedido && r.pedido.numero) ? r.pedido.numero : '';
-      toast('Pedido registrado' + (nro ? ' — N° ' + nro : '') + ' ✅', 'ok');
+      if (despachar && id) {
+        await API.marcarPedidoDespachado(id);
+        toast('Pedido N° ' + nro + ' despachado · venta registrada ✅', 'ok');
+      } else {
+        toast('Pedido registrado' + (nro ? ' — N° ' + nro : '') + ' ✅', 'ok');
+      }
+      cerrarModal();
       await cargarPedidos();
     } catch (e) {
       err.textContent = '⚠️ ' + ((e && e.message) || 'No se pudo registrar el pedido.');
       err.style.display = 'block';
-      btn.disabled = false;
+      btn.disabled = false; if (otro) otro.disabled = false;
     }
-  });
+  }
+  el('pedc-go').addEventListener('click', function () { registrarPedido(false); });
+  el('pedc-go-desp').addEventListener('click', function () { registrarPedido(true); });
   pintarLista();
   pintarCarro();
 }
