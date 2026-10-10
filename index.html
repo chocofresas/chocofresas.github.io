@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%93%3C/text%3E%3C/svg%3E">
-  <title>FresasChoco</title>
+  <title>FresaChoco</title>
   <style>
   :root {
     --prim: #c2185b;           /* fresa profunda */
@@ -625,7 +625,7 @@
     <div class="login-card">
       <div class="logo">🍓</div>
       <div class="login-emojis">🍓🍫🍦🍬🍯🥜</div>
-      <h1>Fresas<em>Choco</em></h1>
+      <h1>Fresa<em>Choco</em></h1>
       <p class="sub">Ventas · Inventario · Control · <span class="ver-app">V1.2</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
@@ -653,7 +653,7 @@
       <div class="gaveta-cab">
         <span class="logo-mini">🍓</span>
         <div class="gaveta-tit">
-          <strong>Fresas<em style="color:#ffd5e1">Choco</em></strong>
+          <strong>Fresa<em style="color:#ffd5e1">Choco</em></strong>
           <div class="gaveta-usuario" id="gaveta-usuario"></div>
         </div>
         <button class="btn-icono gaveta-x" onclick="cerrarGaveta()" title="Cerrar" aria-label="Cerrar menú">✕</button>
@@ -661,7 +661,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">FresasChoco · <span class="ver-app">V1.2</span></div>
+        <div class="gaveta-vers">FresaChoco · <span class="ver-app">V1.2</span></div>
       </div>
     </aside>
 
@@ -679,7 +679,7 @@
   -->
   <script>
 /* ============================================================
-   FRESASCHOCO — Lógica del cliente
+   FRESACHOCO — Lógica del cliente
    Se ejecuta en el navegador (Android, iPhone, PC).
    ============================================================ */
 
@@ -1805,7 +1805,7 @@ function tipoGasto(t) {
 }
 function tituloDe(p) {
   var f = PAGINAS.find(function (x) { return x.id === p; });
-  return f ? f.etq : 'FresasChoco';
+  return f ? f.etq : 'FresaChoco';
 }
 
 function pintarNav() {
@@ -3555,9 +3555,9 @@ function copiarTexto(t) {
 function imprimirQRMenu() {
   var w = window.open('', '_blank');
   if (!w) { toast('Permite las ventanas emergentes para imprimir el QR', 'error'); return; }
-  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>QR del menú — FresasChoco</title></head>' +
+  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>QR del menú — FresaChoco</title></head>' +
     '<body style="margin:0;font-family:system-ui,Arial,sans-serif;text-align:center;padding:36px 20px">' +
-    '<h1 style="margin:0;color:#c2185b">🍓 FresasChoco</h1>' +
+    '<h1 style="margin:0;color:#c2185b">🍓 FresaChoco</h1>' +
     '<h2 style="margin:6px 0 22px">Escanea para ver el menú y hacer tu pedido</h2>' +
     '<img src="' + qrURL(URL_MENU, 460) + '" width="360" height="360" alt="QR">' +
     '<p style="font-size:17px;margin-top:18px">' + esc(URL_MENU) + '</p>' +
