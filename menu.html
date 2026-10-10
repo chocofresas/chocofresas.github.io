@@ -204,7 +204,7 @@
     grid.innerHTML = lista.map(function(p){
       var cod = String(p.codigo);
       var cant = CARRITO[cod] ? CARRITO[cod].cantidad : 0;
-      var agotado = num(p.stock) <= 0;
+      var agotado = p.disponible === false;
       var foto = p.imagen
         ? '<img src="'+esc(p.imagen)+'" alt="'+esc(p.nombre)+'" loading="lazy">'
         : '<div class="sin">'+emoji(p)+'</div>';
@@ -235,7 +235,7 @@
 
   function agregar(cod, d){
     var p = MENU.productos.filter(function(x){ return String(x.codigo)===cod; })[0];
-    if(!p || num(p.stock)<=0) return;
+    if(!p || p.disponible === false) return;
     if(!CARRITO[cod]) CARRITO[cod] = { producto: p, cantidad: 0 };
     CARRITO[cod].cantidad += d;
     if(CARRITO[cod].cantidad <= 0) delete CARRITO[cod];
