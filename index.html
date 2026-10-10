@@ -548,6 +548,55 @@
   .rep-monto { white-space: nowrap; }
   .rep-bs { font-size: 11.5px; color: var(--texto-suave); font-weight: 600; }
   .rep-per .k-num { font-size: 17px; }
+
+  /* ============ MENÚ PÚBLICO (QR, fotos) ============ */
+  .qr-caja { border-top: 4px solid var(--prim); }
+  .qr-flex { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .qr-flex img { border: 1px solid var(--borde); border-radius: 14px; background: #fff; padding: 8px; flex: none; }
+  .qr-info { flex: 1; min-width: 200px; }
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .menu-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; box-shadow: var(--sombra); display: flex; flex-direction: column; }
+  .menu-card.oculto { opacity: .62; border-style: dashed; }
+  .menu-card .mc-foto { height: 128px; background: var(--prim-os); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .menu-card .mc-foto img { width: 100%; height: 100%; object-fit: cover; }
+  .menu-card .mc-sin { font-size: 46px; opacity: .8; }
+  .menu-card .mc-cuerpo { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .menu-card .mc-nom { font-weight: 700; line-height: 1.25; }
+  .menu-card .mc-cat { font-size: 12px; }
+  .menu-card .mc-desc { font-size: 12.5px; line-height: 1.35; min-height: 32px; }
+  .menu-card .mc-acc { display: flex; gap: 6px; margin-top: auto; padding-top: 8px; flex-wrap: wrap; }
+  .menu-card .mc-acc .btn { padding: 7px 10px; font-size: 12.5px; flex: 1; }
+  .menu-sep { grid-column: 1 / -1; font-weight: 800; color: var(--choco); margin: 10px 0 2px; border-bottom: 2px dashed var(--borde); padding-bottom: 6px; }
+  .foto-prev { margin-top: 8px; }
+  .foto-prev img { max-width: 100%; max-height: 190px; border-radius: 12px; border: 1px solid var(--borde); display: block; }
+
+  /* ============ PEDIDOS ============ */
+  .ped-titulo { font-size: 14px; font-weight: 800; margin: 6px 0 10px; color: var(--choco); }
+  .ped-card { background: var(--tarjeta); border: 1px solid var(--borde); border-left: 5px solid var(--avis); border-radius: 14px; padding: 12px 13px; margin-bottom: 10px; box-shadow: var(--sombra); }
+  .ped-card.des { border-left-color: var(--ok); opacity: .92; }
+  .ped-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ped-num { font-weight: 900; font-size: 18px; color: var(--prim); background: var(--prim-os); border-radius: 10px; padding: 2px 10px; }
+  .ped-cli { font-weight: 700; flex: 1; min-width: 120px; }
+  .ped-estado { font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+  .ped-estado.pend { background: var(--avis-os); color: var(--avis); }
+  .ped-estado.ok { background: var(--ok-os); color: var(--ok); }
+  .ped-tipo { font-size: 12px; margin: 3px 0 8px; }
+  .ped-items { display: flex; flex-direction: column; gap: 3px; border-top: 1px dashed var(--borde); border-bottom: 1px dashed var(--borde); padding: 8px 0; }
+  .ped-linea { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+  .ped-nota { font-size: 12.5px; margin-top: 6px; }
+  .ped-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 9px; flex-wrap: wrap; }
+  .ped-tot { font-weight: 800; font-size: 16px; }
+
+  /* Tomar pedido (modal) */
+  .pedc-lista { max-height: 34vh; overflow-y: auto; border: 1px solid var(--borde); border-radius: 12px; margin-top: 6px; }
+  .pedc-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--borde); }
+  .pedc-item:last-child { border-bottom: 0; }
+  .pedc-item .pi-nom { flex: 1; min-width: 0; font-size: 13.5px; }
+  .pedc-item .pi-precio { color: var(--texto-suave); font-size: 12.5px; white-space: nowrap; }
+  .pedc-carro { margin-top: 8px; }
+  .pedc-linea { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--borde); }
+  .pedc-linea .pl-nom { flex: 1; min-width: 0; font-size: 13.5px; }
+  .pedc-total { text-align: right; font-size: 16px; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -558,7 +607,7 @@
       <div class="logo">🍓</div>
       <div class="login-emojis">🍓🍫🍦🍬🍯🥜</div>
       <h1>Fresas<em>Choco</em></h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">V1.0</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">V1.1</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -593,7 +642,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">FresasChoco · <span class="ver-app">V1.0</span></div>
+        <div class="gaveta-vers">FresasChoco · <span class="ver-app">V1.1</span></div>
       </div>
     </aside>
 
@@ -611,7 +660,7 @@
   -->
   <script>
 /* ============================================================
-   BODEGON EVOLUTION — Lógica del cliente
+   FRESASCHOCO — Lógica del cliente
    Se ejecuta en el navegador (Android, iPhone, PC).
    ============================================================ */
 
@@ -642,6 +691,8 @@ var DEMO = !usaRun && (typeof location === 'undefined' || location.protocol === 
 // URL del backend (despliegue web de Apps Script). La app se puede servir desde
 // CUALQUIER página (host propio, localhost…); todos los datos viven en la hoja.
 var URL_API = 'https://script.google.com/macros/s/AKfycby3_MRc7Qczo7ephGu_TMThWyjpzcffA11Nywn2Ioet513FocrxIalvN1j-9FE1MqBPxw/exec';
+// Página pública del menú (la que abre el cliente al escanear el QR).
+var URL_MENU = 'https://chocofresas.github.io/menu.html';
 var CARRITO = [];
 var _promTasa = null;
 var _scan = null;
@@ -1025,7 +1076,12 @@ var API = {
   guardarRemodGasto: function (g) { return apiGrabar('guardarRemodGasto', [S.tok, g], ['remodgastos', 'remodelaciones']); },
   eliminarRemodGasto: function (id) { return apiGrabar('eliminarRemodGasto', [S.tok, id], ['remodgastos']); },
   getDashboard: function () { return apiLlamada('getDashboard', [S.tok]); },
-  reporteComparativo: function (tipo, a, b) { return apiLlamada('reporteComparativo', [S.tok, tipo, a, b]); }
+  reporteComparativo: function (tipo, a, b) { return apiLlamada('reporteComparativo', [S.tok, tipo, a, b]); },
+  // --- Menú público y pedidos ---
+  marcarEnMenu: function (codigo, enMenu) { return apiGrabar('marcarEnMenu', [S.tok, codigo, enMenu], ['productos']); },
+  listarPedidos: function () { return apiLlamada('listarPedidos', [S.tok]); },
+  crearPedidoManual: function (d) { return apiGrabar('crearPedidoManual', [S.tok, d], ['pedidos']); },
+  marcarPedidoDespachado: function (id) { return apiGrabar('marcarPedidoDespachado', [S.tok, id], ['pedidos']); }
 };
 
 // Las escrituras borran la caché local de lo que cambian, para que la siguiente
@@ -1038,14 +1094,72 @@ function apiGrabar(fn, args, claves) {
   });
 }
 
+/* ---------- Subir foto de producto ----------
+   La foto se reduce en el propio teléfono y se envía como "data URL" por POST
+   (el transporte GET no admite cuerpos largos). Así el menú puede mostrar fotos
+   reales sin depender de ningún servicio externo. */
+async function apiSubirFoto(codigo, dataUrl, nombre) {
+  var args = [S.tok, { codigo: codigo, dataUrl: dataUrl, nombre: nombre || '' }];
+  if (usaRun) return apiRpc('subirFotoProducto', args);
+  if (DEMO) return { ok: true, url: dataUrl };
+  var r = await fetch(URL_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ accion: 'subirFotoProducto', args: args })
+  });
+  var o = await r.json();
+  if (!o || o.ok !== true) throw new Error((o && o.error) || 'No se pudo subir la foto.');
+  var v = o.r;
+  if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) {} }
+  return v;
+}
+
+// Reduce la imagen en el navegador a JPEG pequeño (para que quepa en la hoja).
+function comprimirImagen(file, maxLado, calidad) {
+  return new Promise(function (resolve, reject) {
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function () {
+      try {
+        var w = img.naturalWidth || img.width;
+        var h = img.naturalHeight || img.height;
+        var f = Math.min(1, maxLado / Math.max(w, h));
+        var cw = Math.max(1, Math.round(w * f));
+        var ch = Math.max(1, Math.round(h * f));
+        var c = document.createElement('canvas');
+        c.width = cw; c.height = ch;
+        var ctx = c.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', calidad));
+      } catch (e) { URL.revokeObjectURL(url); reject(e); }
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen.')); };
+    img.src = url;
+  });
+}
+
+// Comprime probando varios tamaños hasta que quepa en una celda de Sheets (<48k).
+async function prepararFoto(file) {
+  var intentos = [[520, 0.62], [440, 0.55], [380, 0.5], [320, 0.45], [260, 0.42]];
+  var ultima = '';
+  for (var i = 0; i < intentos.length; i++) {
+    ultima = await comprimirImagen(file, intentos[i][0], intentos[i][1]);
+    if (ultima.length <= 47000) return ultima;
+  }
+  throw new Error('La foto es muy pesada. Toma una foto con menos detalle o usa un enlace.');
+}
+
 /* ---------- Modo DEMO (sin servidor, para probar la interfaz) ---------- */
 function mockApi(fn, args) {
   var tasaMock = { tasa: 853.50, fecha: '2026-09-23', fuente: 'bcv_api', historico: [{ fecha: '2026-09-23', tasa: 853.50 }] };
   var prods = [
-    { codigo: '7501008648076', nombre: 'Cemento Portland 42.5 kg', categoria: 'Materiales', precio_usd: 8.5, costo_usd: 7, stock: 42, stock_min: 10, activo: 1, imagen: '', creado: '2026-09-01' },
-    { codigo: '7501050530103', nombre: 'Pintura Vinil Acrílica 4L', categoria: 'Pintura', precio_usd: 14, costo_usd: 11.5, stock: 6, stock_min: 8, activo: 1, imagen: '', creado: '2026-09-01' },
-    { codigo: 'PR-100', nombre: 'Clavos 2" (caja)', categoria: 'Ferretería', precio_usd: 3.2, costo_usd: 2.4, stock: 30, stock_min: 5, activo: 1, imagen: '', creado: '2026-08-15' },
-    { codigo: 'PR-101', nombre: 'Taladro percutor', categoria: 'Herramientas', precio_usd: 85, costo_usd: 70, stock: 2, stock_min: 1, activo: 1, imagen: '', creado: '2026-07-10' }
+    { codigo: 'FC-001', nombre: 'Fresas con Chocolate', categoria: 'Fresas con Chocolate', precio_usd: 5, costo_usd: 2.5, stock: 40, stock_min: 10, activo: 1, imagen: '', descripcion: 'Fresas frescas bañadas en chocolate oscuro.', en_menu: 1, creado: '2026-09-01' },
+    { codigo: 'FC-002', nombre: 'Fresas con Crema', categoria: 'Fresas con Crema', precio_usd: 4.5, costo_usd: 2, stock: 30, stock_min: 8, activo: 1, imagen: '', descripcion: 'Fresas con crema chantillí y un toque de arequipe.', en_menu: 1, creado: '2026-09-01' },
+    { codigo: 'FC-003', nombre: 'Chispas de Colores', categoria: 'Chispas de Colores', precio_usd: 3, costo_usd: 1.2, stock: 50, stock_min: 12, activo: 1, imagen: '', descripcion: 'Vasito de chispas de colores surtidas.', en_menu: 1, creado: '2026-08-15' },
+    { codigo: 'FC-004', nombre: 'Dandys', categoria: 'Dandys', precio_usd: 2.5, costo_usd: 1, stock: 4, stock_min: 6, activo: 1, imagen: '', descripcion: 'Dandy cubierto de chocolate.', en_menu: 1, creado: '2026-07-10' }
   ];
   var map = {
     login: function () { return { ok: true, token: 'demo', usuario: 'admin', nombre: 'Administrador (Demo)', rol: 'admin' }; },
@@ -1077,7 +1191,16 @@ function mockApi(fn, args) {
     listarEmpleados: function () { return [{ id: 'E1', nombre: 'Juan Pérez', cargo: 'Albañil', salario_usd: 220, fecha_ingreso: '2026-01-10', activo: 1 }]; },
     listarSueldos: function () { return [{ id: 'S1', empleado_id: 'E1', empleado_nombre: 'Juan Pérez', periodo: '2026-09', fecha_pago: '', monto_usd: 220, estado: 'pendiente', nota: '' }]; },
     listarRemodelaciones: function () { return [{ id: 'R1', nombre: 'Remodelación sala', tipo: 'Remodelación', descripcion: 'Pintura y piso', estado: 'En progreso', progreso: 60, fecha_inicio: '2026-08-01', fecha_fin_estimada: '2026-10-15' }]; },
-    listarRemodGastos: function () { return []; }
+    listarRemodGastos: function () { return []; },
+    marcarEnMenu: function () { return prods[0]; },
+    listarPedidos: function () {
+      return [
+        { id: 'P1', numero: '0001', creado_el: '2026-09-23T10:20:00', creado_por: 'menú público', tipo: 'cliente', cliente_nombre: 'María', cliente_telefono: '0414-1234567', items: JSON.stringify([{ codigo: 'FC-001', nombre: 'Fresas con Chocolate', cantidad: 2, precio_usd: 5, sub_usd: 10 }]), total_usd: 10, tasa: 853.5, total_ves: 8535, estado: 'pendiente', entregado_el: '', nota: '' },
+        { id: 'P2', numero: '0002', creado_el: '2026-09-23T10:35:00', creado_por: 'Administrador (Demo)', tipo: 'app', cliente_nombre: 'Mesa 3', cliente_telefono: '', items: JSON.stringify([{ codigo: 'FC-002', nombre: 'Fresas con Crema', cantidad: 1, precio_usd: 4.5, sub_usd: 4.5 }]), total_usd: 4.5, tasa: 853.5, total_ves: 3840.75, estado: 'despachado', entregado_el: '2026-09-23T10:50:00', nota: '' }
+      ];
+    },
+    crearPedidoManual: function () { return { ok: true, pedido: { id: 'P9', numero: '0009', total_usd: 5, total_ves: 4267.5, tasa: 853.5 } }; },
+    marcarPedidoDespachado: function () { return { ok: true }; }
   };
   var f = map[fn];
   if (!f) return Promise.resolve({ ok: true });
@@ -1617,6 +1740,8 @@ var PAGINAS = [
   { id: 'inicio', etq: 'Inicio', icono: '🏠', admin: false },
   { id: 'vender', etq: 'Vender', icono: '🛒', admin: false },
   { id: 'productos', etq: 'Inventario', icono: '🍓', admin: false },
+  { id: 'menu', etq: 'Menú', icono: '📖', admin: true },
+  { id: 'pedidos', etq: 'Pedidos', icono: '🛎️', admin: false },
   { id: 'ventas', etq: 'Ventas', icono: '🧾', admin: false },
   { id: 'reportes', etq: 'Reportes', icono: '📊', admin: true },
   { id: 'gastos', etq: 'Gastos', icono: '💸', admin: true },
@@ -1702,6 +1827,7 @@ function piePosVisible(v) {
 async function irA(pagina, params) {
   detenerEscaneoVivo(); // si salimos de Vender, apaga la cámara para no dejarla abierta
   cerrarGavetaCarrito(); // al salir de Vender cerramos la gaveta del carrito
+  pararAutoPedidos(); // al salir de Pedidos detenemos el refresco automático
   S.pagina = pagina;
   pintarNav();
   var tl = el('titulo-pagina');
@@ -1782,8 +1908,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'V1.0' && window.__avisar) {
-        window.__avisar('La página es V1.0, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.0).', true);
+      if (sv && sv.version && sv.version !== 'V1.1' && window.__avisar) {
+        window.__avisar('La página es V1.1, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.1).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -2376,7 +2502,11 @@ function refrescarInventarioTrasCategorias() {
 
 function formularioProducto(prod) {
   var ed = !!(prod && prod.codigo);
-  var p = prod || { codigo: '', nombre: '', categoria: 'General', precio_usd: '', costo_usd: '', stock: 0, stock_min: 0, activo: 1 };
+  var p = prod || { codigo: '', nombre: '', categoria: 'General', precio_usd: '', costo_usd: '', stock: 0, stock_min: 0, activo: 1, imagen: '', descripcion: '', en_menu: 1 };
+  var enMenu = String(p.en_menu) !== '0';
+  var imagenActual = String(p.imagen || '');
+  var textoFoto = imagenActual.indexOf('data:') === 0 ? '' : imagenActual;
+  var fotoAccion = 'auto'; // 'auto' | 'omit' (ya subida) | 'clear'
   abrirModal(
     '<div class="modal-tope"><h3>' + (ed ? 'Editar producto' : 'Nuevo producto') + '</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
     '<label class="campo">Código de barras / QR</label>' +
@@ -2391,6 +2521,16 @@ function formularioProducto(prod) {
     '<div><label class="campo">Stock inicial</label><input id="f-stock" type="number" min="0" value="' + esc(p.stock) + '"' + (ed ? ' disabled' : '') + '></div>' +
     '<div><label class="campo">Stock mínimo</label><input id="f-min" type="number" min="0" value="' + esc(p.stock_min || 0) + '"></div>' +
     '</div>' +
+    '<label class="campo">📖 Menú público — foto y detalles</label>' +
+    '<input id="f-foto" placeholder="Enlace (URL) de la foto o usa el botón…" value="' + esc(textoFoto) + '" autocomplete="off">' +
+    '<div class="fila-botones" style="margin-top:6px">' +
+    '<button class="btn" id="f-foto-btn" type="button">📷 Elegir foto del dispositivo</button>' +
+    '<button class="btn btn-suave" id="f-foto-quitar" type="button">🗑 Quitar foto</button>' +
+    '</div>' +
+    '<input type="file" id="f-foto-file" accept="image/*" style="display:none">' +
+    '<div id="f-foto-prev" class="foto-prev"></div>' +
+    '<textarea id="f-desc" rows="2" placeholder="Descripción para el cliente (ej.: fresas frescas con chocolate oscuro y topping de chispas)…" style="margin-top:8px">' + esc(p.descripcion || '') + '</textarea>' +
+    '<label class="campo"><input type="checkbox" id="f-menu" style="width:auto"' + (enMenu ? ' checked' : '') + '> Mostrar en el menú público (QR)</label>' +
     '<label class="campo"><input type="checkbox" id="f-activo" style="width:auto"' + (String(p.activo) !== '0' ? ' checked' : '') + '> Activo</label>' +
     '<div id="f-error" class="aviso aviso-error" style="display:none;margin-top:10px"></div>' +
     '<div class="modal-acciones">' +
@@ -2402,6 +2542,49 @@ function formularioProducto(prod) {
       abrirScanner(function (c) { el('f-cod').value = c; });
     });
   }
+  // --- Foto del producto (menú) ---
+  var prevBox = el('f-foto-prev');
+  function pintarPrev(url) {
+    if (!prevBox) return;
+    prevBox.innerHTML = url
+      ? '<img src="' + esc(url) + '" alt="Foto del producto">'
+      : '<span class="muted">Sin foto (se mostrará un ícono 🍓)</span>';
+  }
+  pintarPrev(imagenActual);
+  el('f-foto').addEventListener('input', function () { pintarPrev(this.value.trim()); });
+  el('f-foto-btn').addEventListener('click', function () {
+    if (!ed) { toast('Guarda el producto primero; luego ábrelo de nuevo para agregar la foto.', 'error'); return; }
+    el('f-foto-file').click();
+  });
+  el('f-foto-quitar').addEventListener('click', function () {
+    imagenActual = '';
+    fotoAccion = ed ? 'clear' : 'auto';
+    el('f-foto').value = '';
+    pintarPrev('');
+  });
+  el('f-foto-file').addEventListener('change', async function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    var btn = el('f-foto-btn');
+    var prevTxt = btn.textContent;
+    btn.disabled = true; btn.textContent = '⏳ Procesando foto…';
+    try {
+      var dataUrl = await prepararFoto(f);
+      btn.textContent = '⏳ Subiendo…';
+      var r = await apiSubirFoto(p.codigo, dataUrl, p.nombre || 'producto');
+      var url = (r && r.url) ? r.url : dataUrl;
+      imagenActual = url;
+      fotoAccion = 'omit'; // ya quedó guardada en el servidor
+      el('f-foto').value = '';
+      pintarPrev(url);
+      toast('Foto guardada 📷', 'ok');
+    } catch (e2) {
+      toast((e2 && e2.message) || 'No se pudo subir la foto', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = prevTxt;
+    }
+  });
   el('f-guardar').addEventListener('click', async function () {
     var errBox = el('f-error');
     if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
@@ -2414,8 +2597,18 @@ function formularioProducto(prod) {
         costo_usd: num(el('f-costo').value),
         stock: ed ? num(p.stock) : num(el('f-stock').value),
         stock_min: num(el('f-min').value),
+        descripcion: el('f-desc').value.trim(),
+        en_menu: el('f-menu').checked ? 1 : 0,
         activo: el('f-activo').checked ? 1 : 0
       };
+      // La foto solo se envía si el usuario la cambió a mano (evita reenviar
+      // fotos pesadas por el transporte GET). Si se subió o se quitó, ya se
+      // resolvió contra el servidor.
+      if (fotoAccion === 'clear') datos.imagen = '';
+      else if (fotoAccion !== 'omit') {
+        var fotoVal = (el('f-foto').value || '').trim();
+        if (fotoVal !== textoFoto) datos.imagen = fotoVal;
+      }
       var r = await API.guardarProducto(datos);
       // Si la categoría es nueva, se guarda en la hoja (aparece en el
       // desplegable de los demás artículos aunque aún no tenga otros productos).
@@ -2436,9 +2629,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.0 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.1 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir V1.0).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir V1.1).');
           });
         })();
       }
@@ -2459,9 +2652,12 @@ function formularioProductoPorCodigo(codigo) {
 function verProducto(codigo) {
   var p = prods().find(function (x) { return String(x.codigo) === codigo; });
   if (!p) { toast('Producto no encontrado: ' + codigo, 'error'); return; }
+  var enMenu = String(p.en_menu) !== '0';
   abrirModal(
     '<div class="modal-tope"><h3>' + esc(p.nombre) + '</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
-    '<p class="muted mono">' + esc(p.codigo) + ' · ' + esc(p.categoria) + '</p>' +
+    '<p class="muted mono">' + esc(p.codigo) + ' · ' + esc(p.categoria) + (enMenu ? ' · 📖 En el menú' : '') + '</p>' +
+    (p.imagen ? '<div class="foto-prev"><img src="' + esc(p.imagen) + '" alt="' + esc(p.nombre) + '"></div>' : '') +
+    (p.descripcion ? '<p>' + esc(p.descripcion) + '</p>' : '') +
     '<div class="resumen-venta">' +
     '<div class="cajita"><small>Precio</small><div class="tot">' + fmtUSD(p.precio_usd) + '</div></div>' +
     '<div class="cajita"><small>En Bolívares</small><div class="tot">' + fmtVES(p.precio_usd * (S.tasa || 0)) + '</div></div>' +
@@ -3317,6 +3513,316 @@ function resetearClaveUsuario(u) {
     try { await API.resetearPassword(u.usuario, el('ru-pwd').value); cerrarModal(); toast('Contraseña cambiada', 'ok'); }
     catch (e) { toast(e.message, 'error'); }
   });
+}
+
+/* ============================================================
+   PANTALLA: MENÚ PÚBLICO (admin) — fotos, detalles y código QR
+   ============================================================ */
+function qrURL(url, size) {
+  var s = size || 300;
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=' + s + 'x' + s + '&margin=10&data=' + encodeURIComponent(url);
+}
+
+function copiarTexto(t) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(function () { toast('Enlace copiado ✅', 'ok'); }, function () { toast('Copia el enlace manualmente', 'error'); });
+      return;
+    }
+  } catch (e) {}
+  toast('Copia manualmente: ' + t, 'ok');
+}
+
+function imprimirQRMenu() {
+  var w = window.open('', '_blank');
+  if (!w) { toast('Permite las ventanas emergentes para imprimir el QR', 'error'); return; }
+  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>QR del menú — FresasChoco</title></head>' +
+    '<body style="margin:0;font-family:system-ui,Arial,sans-serif;text-align:center;padding:36px 20px">' +
+    '<h1 style="margin:0;color:#c2185b">🍓 FresasChoco</h1>' +
+    '<h2 style="margin:6px 0 22px">Escanea para ver el menú y hacer tu pedido</h2>' +
+    '<img src="' + qrURL(URL_MENU, 460) + '" width="360" height="360" alt="QR">' +
+    '<p style="font-size:17px;margin-top:18px">' + esc(URL_MENU) + '</p>' +
+    '<p style="color:#777">¡Te esperamos! 🍫🍦🍓</p>' +
+    '</body></html>');
+  w.document.close();
+  w.focus();
+  setTimeout(function () { try { w.print(); } catch (e) {} }, 500);
+}
+
+render.menu = async function () {
+  if (S.rol !== 'admin') { pinError('Solo el administrador puede editar el menú.'); return; }
+  if (!prods().length) await cargarProductos();
+  pintar(
+    '<div class="tarjeta qr-caja">' +
+      '<h2>📖 Menú para tus clientes</h2>' +
+      '<p class="muted">Muestra o imprime este código QR. El cliente lo escanea con su teléfono, ve el menú con las fotos y hace su pedido; la app le da un <b>número de orden</b> que los empleados ven en la pantalla <b>🛎️ Pedidos</b>.</p>' +
+      '<div class="qr-flex">' +
+        '<img id="qr-img" src="' + qrURL(URL_MENU, 300) + '" alt="Código QR del menú" width="220" height="220">' +
+        '<div class="qr-info">' +
+          '<p class="mono" style="word-break:break-all">' + esc(URL_MENU) + '</p>' +
+          '<div class="fila-botones">' +
+            '<button class="btn btn-primario" id="mn-abrir">🔗 Abrir menú</button>' +
+            '<button class="btn" id="mn-copiar">📋 Copiar enlace</button>' +
+            '<button class="btn" id="mn-print">🖨 Imprimir QR</button>' +
+          '</div>' +
+          '<p class="muted" style="font-size:12px;margin-top:8px">Si el QR no carga, usa el enlace de arriba.</p>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="buscador"><input id="mn-bus" placeholder="Buscar producto…" autocomplete="off"></div>' +
+    '<div id="mn-resumen" class="muted" style="margin:0 0 8px"></div>' +
+    '<div id="mn-grid" class="menu-grid"></div>'
+  );
+  el('mn-abrir').addEventListener('click', function () { window.open(URL_MENU, '_blank'); });
+  el('mn-copiar').addEventListener('click', function () { copiarTexto(URL_MENU); });
+  el('mn-print').addEventListener('click', imprimirQRMenu);
+  el('mn-bus').addEventListener('input', function () { pintarGridMenu(this.value); });
+  pintarGridMenu('');
+};
+
+function pintarGridMenu(q) {
+  var grid = el('mn-grid');
+  if (!grid) return;
+  var ql = (q || '').trim().toLowerCase();
+  var lista = prods().filter(function (p) {
+    return !ql || String(p.nombre).toLowerCase().indexOf(ql) >= 0 || String(p.codigo).toLowerCase().indexOf(ql) >= 0;
+  });
+  var enMenu = lista.filter(function (p) { return String(p.en_menu) !== '0'; });
+  var fuera = lista.filter(function (p) { return String(p.en_menu) === '0'; });
+  var res = el('mn-resumen');
+  if (res) res.textContent = enMenu.length + ' en el menú · ' + fuera.length + ' ocultos';
+  function tarjeta(p, visible) {
+    var img = p.imagen
+      ? '<img src="' + esc(p.imagen) + '" alt="' + esc(p.nombre) + '">'
+      : '<div class="mc-sin">' + emojiDeProducto(p) + '</div>';
+    return '<div class="menu-card' + (visible ? '' : ' oculto') + '">' +
+      '<div class="mc-foto">' + img + '</div>' +
+      '<div class="mc-cuerpo">' +
+        '<div class="mc-nom"><span class="prod-emoji">' + emojiDeProducto(p) + '</span>' + esc(p.nombre) + '</div>' +
+        '<div class="mc-cat muted">' + esc(p.categoria) + ' · ' + fmtUSD(p.precio_usd) + '</div>' +
+        '<div class="mc-desc muted">' + (p.descripcion ? esc(p.descripcion) : '<i>Sin detalles</i>') + '</div>' +
+        '<div class="mc-acc">' +
+          '<button class="btn btn-suave" data-mn-edit="' + esc(p.codigo) + '">✏️ Foto y detalles</button>' +
+          '<button class="btn' + (visible ? ' btn-suave' : ' btn-primario') + '" data-mn-toggle="' + esc(p.codigo) + '" data-est="' + (visible ? 0 : 1) + '">' + (visible ? '🙈 Ocultar' : '👁 Agregar') + '</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+  grid.innerHTML = enMenu.map(function (p) { return tarjeta(p, true); }).join('') +
+    (fuera.length ? '<div class="menu-sep">Fuera del menú</div>' + fuera.map(function (p) { return tarjeta(p, false); }).join('') : '');
+  Array.prototype.forEach.call(grid.querySelectorAll('[data-mn-edit]'), function (b) {
+    b.addEventListener('click', function () {
+      var cod = b.getAttribute('data-mn-edit');
+      var p = prods().find(function (x) { return String(x.codigo) === cod; });
+      formularioProducto(p);
+    });
+  });
+  Array.prototype.forEach.call(grid.querySelectorAll('[data-mn-toggle]'), function (b) {
+    b.addEventListener('click', async function () {
+      var cod = b.getAttribute('data-mn-toggle');
+      var est = num(b.getAttribute('data-est'));
+      b.disabled = true;
+      try {
+        await API.marcarEnMenu(cod, est);
+        await cargarProductos();
+        pintarGridMenu(el('mn-bus') ? el('mn-bus').value : '');
+        toast(est ? 'Agregado al menú 📖' : 'Ocultado del menú', 'ok');
+      } catch (e) { toast((e && e.message) || 'No se pudo cambiar', 'error'); b.disabled = false; }
+    });
+  });
+}
+
+/* ============================================================
+   PANTALLA: PEDIDOS — orden de llegada (clientes por QR y caja)
+   ============================================================ */
+var _pedTimer = null;
+function pararAutoPedidos() { if (_pedTimer) { clearInterval(_pedTimer); _pedTimer = null; } }
+
+render.pedidos = async function () {
+  pintar(
+    '<div class="fila-botones" style="margin:0 0 8px">' +
+      '<button class="btn btn-primario" id="ped-nuevo">＋ Tomar pedido</button>' +
+      '<button class="btn" id="ped-reload">↻ Recargar</button>' +
+    '</div>' +
+    '<p class="muted" id="ped-act" style="margin:0 0 10px">Los pedidos se muestran por orden de llegada y se actualizan solos cada 20 s.</p>' +
+    '<div id="ped-lista"><div class="cargando">Cargando pedidos…</div></div>'
+  );
+  el('ped-nuevo').addEventListener('click', formularioPedido);
+  el('ped-reload').addEventListener('click', function () { cargarPedidos(); toast('Pedidos recargados', 'ok'); });
+  await cargarPedidos();
+  pararAutoPedidos();
+  _pedTimer = setInterval(function () {
+    if (S.pagina === 'pedidos' && !document.hidden) cargarPedidos(true);
+  }, 20000);
+};
+
+async function cargarPedidos(silencioso) {
+  var cont = el('ped-lista');
+  if (!cont) return;
+  try {
+    var lista = await API.listarPedidos();
+    if (!Array.isArray(lista)) lista = [];
+    pintarPedidos(lista);
+  } catch (e) {
+    if (!silencioso) cont.innerHTML = '<div class="tarjeta"><div class="aviso aviso-error">' + esc((e && e.message) || 'No se pudieron cargar los pedidos.') + '</div></div>';
+  }
+}
+
+function pintarPedidos(lista) {
+  var cont = el('ped-lista');
+  if (!cont) return;
+  if (!lista.length) {
+    cont.innerHTML = '<div class="tarjeta muted">Todavía no hay pedidos. Cuando un cliente escanee el QR y pida, o cuando tomes un pedido, aparecerá aquí.</div>';
+    return;
+  }
+  var pend = lista.filter(function (p) { return String(p.estado) !== 'despachado'; });
+  var desp = lista.filter(function (p) { return String(p.estado) === 'despachado'; }).reverse();
+  var html = '<h3 class="ped-titulo">🟡 Pendientes (' + pend.length + ')</h3>';
+  html += pend.length ? pend.map(cardPedido).join('') : '<div class="tarjeta muted">No hay pedidos pendientes 🎉</div>';
+  if (desp.length) {
+    html += '<h3 class="ped-titulo" style="margin-top:18px">🟢 Despachados (' + desp.length + ')</h3>';
+    html += desp.slice(0, 40).map(cardPedido).join('');
+  }
+  cont.innerHTML = html;
+  Array.prototype.forEach.call(cont.querySelectorAll('[data-ped-desp]'), function (b) {
+    b.addEventListener('click', async function () {
+      var id = b.getAttribute('data-ped-desp');
+      b.disabled = true;
+      try {
+        await API.marcarPedidoDespachado(id);
+        toast('Pedido despachado ✅', 'ok');
+        await cargarPedidos();
+      } catch (e) { toast((e && e.message) || 'No se pudo marcar', 'error'); b.disabled = false; }
+    });
+  });
+}
+
+function cardPedido(p) {
+  var items = [];
+  try { items = JSON.parse(p.items || '[]'); } catch (e) { items = []; }
+  var desp = String(p.estado) === 'despachado';
+  var tipo = String(p.tipo) === 'app' ? '🛎️ Tomado en caja' : '📱 Cliente (QR)';
+  var nro = String(p.numero == null ? '' : p.numero).replace(/\D/g, '');
+  nro = nro ? ('0000' + nro).slice(-4) : String(p.numero || '');
+  return '<div class="ped-card' + (desp ? ' des' : '') + '">' +
+    '<div class="ped-cab">' +
+      '<span class="ped-num">#' + esc(nro) + '</span>' +
+      '<span class="ped-cli">' + esc(p.cliente_nombre || 'Cliente') + (p.cliente_telefono ? ' · ' + esc(p.cliente_telefono) : '') + '</span>' +
+      '<span class="ped-estado ' + (desp ? 'ok' : 'pend') + '">' + (desp ? '🟢 Despachado' : '🟡 Pendiente') + '</span>' +
+    '</div>' +
+    '<div class="ped-tipo muted">' + tipo + ' · ' + fechaHora(p.creado_el) + '</div>' +
+    '<div class="ped-items">' + (items.length ? items.map(function (it) {
+      return '<div class="ped-linea"><span>' + fmtCant(it.cantidad) + '× ' + esc(it.nombre || '') + '</span><span class="mono">' + fmtUSD(it.sub_usd) + '</span></div>';
+    }).join('') : '<i class="muted">Sin detalle</i>') + '</div>' +
+    (p.nota ? '<div class="ped-nota muted">📝 ' + esc(p.nota) + '</div>' : '') +
+    '<div class="ped-pie">' +
+      '<span class="ped-tot">' + fmtUSD(p.total_usd) + ' <small class="muted">/ ' + fmtVES(p.total_ves) + '</small></span>' +
+      (desp
+        ? '<span class="muted" style="font-size:12px">Entregado ' + (p.entregado_el ? fechaHora(p.entregado_el) : '') + '</span>'
+        : '<button class="btn btn-primario" data-ped-desp="' + esc(p.id) + '">✓ Marcar despachado</button>') +
+    '</div>' +
+  '</div>';
+}
+
+/* ---------- Tomar un pedido desde la app (empleado o admin) ---------- */
+var _pedCarrito = [];
+function formularioPedido() {
+  _pedCarrito = [];
+  if (!prods().length) {
+    toast('Cargando productos…', 'ok');
+    cargarProductos().then(function () { formularioPedido(); });
+    return;
+  }
+  abrirModal(
+    '<div class="modal-tope"><h3>🛎️ Tomar pedido</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+    '<label class="campo">Nombre del cliente *</label><input id="pedc-nom" placeholder="ej: Ana · mesa 3 · para llevar" autocomplete="off">' +
+    '<label class="campo">Teléfono (opcional)</label><input id="pedc-tel" inputmode="tel" autocomplete="off">' +
+    '<label class="campo">Agregar productos</label>' +
+    '<div class="buscador"><input id="pedc-bus" placeholder="Buscar por nombre o código…" autocomplete="off"></div>' +
+    '<div id="pedc-lista" class="pedc-lista"></div>' +
+    '<div id="pedc-carro" class="pedc-carro"></div>' +
+    '<label class="campo">Nota (opcional)</label><input id="pedc-nota" placeholder="ej: sin arequipe" autocomplete="off">' +
+    '<div id="pedc-error" class="aviso aviso-error" style="display:none;margin-top:10px"></div>' +
+    '<div class="modal-acciones">' +
+      '<button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
+      '<button class="btn btn-primario" id="pedc-go">Registrar pedido</button>' +
+    '</div>'
+  );
+  function pintarLista() {
+    var q = (el('pedc-bus').value || '').trim().toLowerCase();
+    var list = prods().filter(function (p) {
+      return String(p.activo) === '1' && (!q || String(p.nombre).toLowerCase().indexOf(q) >= 0 || String(p.codigo).toLowerCase().indexOf(q) >= 0);
+    }).slice(0, 24);
+    var box = el('pedc-lista');
+    box.innerHTML = list.map(function (p) {
+      return '<div class="pedc-item">' +
+        '<div class="pi-nom"><span class="prod-emoji">' + emojiDeProducto(p) + '</span>' + esc(p.nombre) + '</div>' +
+        '<div class="pi-precio mono">' + fmtUSD(p.precio_usd) + '</div>' +
+        '<button class="btn btn-suave" data-add="' + esc(p.codigo) + '">＋</button>' +
+      '</div>';
+    }).join('') || '<p class="muted">Sin productos.</p>';
+    Array.prototype.forEach.call(box.querySelectorAll('[data-add]'), function (b) {
+      b.addEventListener('click', function () { agregarAlPedido(b.getAttribute('data-add')); });
+    });
+  }
+  function pintarCarro() {
+    var box = el('pedc-carro');
+    if (!_pedCarrito.length) { box.innerHTML = '<p class="muted" style="margin:6px 0">Aún no has agregado productos.</p>'; return; }
+    var tot = _pedCarrito.reduce(function (s, l) { return s + l.precio_usd * l.cantidad; }, 0);
+    box.innerHTML = _pedCarrito.map(function (l, i) {
+      return '<div class="pedc-linea">' +
+        '<span class="pl-nom">' + esc(l.nombre) + '</span>' +
+        '<span class="cnt"><button class="cnt-btn" data-pp="-1" data-i="' + i + '">−</button>' +
+        '<span>' + fmtCant(l.cantidad) + '</span>' +
+        '<button class="cnt-btn" data-pp="1" data-i="' + i + '">+</button></span>' +
+        '<span class="mono der" style="min-width:70px">' + fmtUSD(l.precio_usd * l.cantidad) + '</span>' +
+      '</div>';
+    }).join('') +
+    '<div class="pedc-total">Total: <b>' + fmtUSD(tot) + '</b> <small class="muted">/ ' + fmtVES(tot * (S.tasa || 0)) + '</small></div>';
+    Array.prototype.forEach.call(box.querySelectorAll('[data-pp]'), function (b) {
+      b.addEventListener('click', function () {
+        var i = num(b.getAttribute('data-i'));
+        var d = num(b.getAttribute('data-pp'));
+        if (!_pedCarrito[i]) return;
+        _pedCarrito[i].cantidad += d;
+        if (_pedCarrito[i].cantidad <= 0) _pedCarrito.splice(i, 1);
+        pintarCarro();
+      });
+    });
+  }
+  function agregarAlPedido(cod) {
+    var p = prods().find(function (x) { return String(x.codigo) === cod; });
+    if (!p) return;
+    var l = _pedCarrito.find(function (x) { return String(x.codigo) === cod; });
+    if (l) l.cantidad += 1;
+    else _pedCarrito.push({ codigo: p.codigo, nombre: p.nombre, precio_usd: num(p.precio_usd), cantidad: 1 });
+    pintarCarro();
+  }
+  el('pedc-bus').addEventListener('input', pintarLista);
+  el('pedc-go').addEventListener('click', async function () {
+    var err = el('pedc-error'); err.style.display = 'none';
+    var nom = (el('pedc-nom').value || '').trim();
+    if (!nom) { err.textContent = 'Escribe el nombre del cliente.'; err.style.display = 'block'; return; }
+    if (!_pedCarrito.length) { err.textContent = 'Agrega al menos un producto.'; err.style.display = 'block'; return; }
+    var btn = el('pedc-go'); btn.disabled = true;
+    try {
+      var r = await API.crearPedidoManual({
+        cliente: { nombre: nom, telefono: (el('pedc-tel').value || '').trim() },
+        nota: (el('pedc-nota').value || '').trim(),
+        items: _pedCarrito.map(function (l) { return { codigo: l.codigo, cantidad: l.cantidad }; })
+      });
+      cerrarModal();
+      var nro = (r && r.pedido && r.pedido.numero) ? r.pedido.numero : '';
+      toast('Pedido registrado' + (nro ? ' — N° ' + nro : '') + ' ✅', 'ok');
+      await cargarPedidos();
+    } catch (e) {
+      err.textContent = '⚠️ ' + ((e && e.message) || 'No se pudo registrar el pedido.');
+      err.style.display = 'block';
+      btn.disabled = false;
+    }
+  });
+  pintarLista();
+  pintarCarro();
 }
 
 /* ---------- Arranque ---------- */
