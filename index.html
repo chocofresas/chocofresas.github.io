@@ -598,6 +598,24 @@
   .pedc-linea { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--borde); }
   .pedc-linea .pl-nom { flex: 1; min-width: 0; font-size: 13.5px; }
   .pedc-total { text-align: right; font-size: 16px; margin-top: 8px; }
+
+  /* Modalidad + método de pago (selector y switch) */
+  .ped-tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; }
+  .ped-tag { font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; background: var(--choco-os); color: var(--choco); }
+  .ped-tag.pm { background: var(--prim-os); color: var(--prim); }
+  .ped-tag.div { background: var(--ok-os); color: var(--ok); }
+  .seg { display: flex; gap: 8px; margin-top: 4px; }
+  .seg-btn { flex: 1; border: 1px solid var(--borde); background: #fff; color: var(--choco); border-radius: 12px; padding: 11px 8px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit; }
+  .seg-btn.on { background: var(--prim); border-color: var(--prim); color: #fff; }
+  .pago-fila { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 6px; }
+  .pago-lbl { font-size: 13px; font-weight: 800; color: var(--texto-suave); opacity: .6; transition: opacity .15s, color .15s; }
+  .pago-lbl.on { color: var(--prim); opacity: 1; }
+  .switch { position: relative; display: inline-block; width: 54px; height: 30px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .switch .sw { position: absolute; inset: 0; background: #cbb6ab; border-radius: 999px; transition: background .2s; cursor: pointer; }
+  .switch .sw::before { content: ""; position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; background: #fff; border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .switch input:checked + .sw { background: var(--prim); }
+  .switch input:checked + .sw::before { transform: translateX(24px); }
 </style>
 </head>
 <body>
@@ -608,7 +626,7 @@
       <div class="logo">🍓</div>
       <div class="login-emojis">🍓🍫🍦🍬🍯🥜</div>
       <h1>Fresas<em>Choco</em></h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">V1.1</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">V1.2</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -643,7 +661,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">FresasChoco · <span class="ver-app">V1.1</span></div>
+        <div class="gaveta-vers">FresasChoco · <span class="ver-app">V1.2</span></div>
       </div>
     </aside>
 
@@ -1909,8 +1927,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'V1.1' && window.__avisar) {
-        window.__avisar('La página es V1.1, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.1).', true);
+      if (sv && sv.version && sv.version !== 'V1.2' && window.__avisar) {
+        window.__avisar('La página es V1.2, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.2).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -2630,9 +2648,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.1 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir V1.2 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir V1.1).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir V1.2).');
           });
         })();
       }
@@ -3712,6 +3730,13 @@ function cardPedido(p) {
       '<span class="ped-estado ' + (desp ? 'ok' : 'pend') + '">' + (desp ? '🟢 Despachado' : '🟡 Pendiente') + '</span>' +
     '</div>' +
     '<div class="ped-tipo muted">' + tipo + ' · ' + fechaHora(p.creado_el) + '</div>' +
+    '<div class="ped-tags">' +
+      '<span class="ped-tag">' + (String(p.modalidad) === 'comer' ? '🍽️ Comer aquí' : '🛍️ Para llevar') + '</span>' +
+      '<span class="ped-tag' + (String(p.metodo_pago) === 'divisas' ? ' div' : ' pm') + '">' +
+        (String(p.metodo_pago) === 'divisas' ? '💵 Divisas' : '📲 Pago Móvil') +
+        (p.referencia && String(p.metodo_pago) !== 'divisas' ? ' · Ref: ' + esc(p.referencia) : '') +
+      '</span>' +
+    '</div>' +
     '<div class="ped-items">' + (items.length ? items.map(function (it) {
       return '<div class="ped-linea"><span>' + fmtCant(it.cantidad) + '× ' + esc(it.nombre || '') + '</span><span class="mono">' + fmtUSD(it.sub_usd) + '</span></div>';
     }).join('') : '<i class="muted">Sin detalle</i>') + '</div>' +
@@ -3738,6 +3763,21 @@ function formularioPedido() {
     '<div class="modal-tope"><h3>🛎️ Tomar pedido</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
     '<label class="campo">Nombre del cliente *</label><input id="pedc-nom" placeholder="ej: Ana · mesa 3 · para llevar" autocomplete="off">' +
     '<label class="campo">Teléfono (opcional)</label><input id="pedc-tel" inputmode="tel" autocomplete="off">' +
+    '<label class="campo">¿Para llevar o comer aquí?</label>' +
+    '<div class="seg" id="pedc-modo">' +
+      '<button type="button" class="seg-btn on" data-modo="llevar">🛍️ Para llevar</button>' +
+      '<button type="button" class="seg-btn" data-modo="comer">🍽️ Comer aquí</button>' +
+    '</div>' +
+    '<label class="campo">Método de pago</label>' +
+    '<div class="pago-fila">' +
+      '<span class="pago-lbl on" id="pedc-pm-lbl">📲 Pago Móvil</span>' +
+      '<label class="switch"><input type="checkbox" id="pedc-pago-sw" checked><span class="sw"></span></label>' +
+      '<span class="pago-lbl" id="pedc-div-lbl">💵 Divisas</span>' +
+    '</div>' +
+    '<div id="pedc-ref-caja">' +
+      '<label class="campo">Referencia del Pago Móvil (opcional)</label>' +
+      '<input id="pedc-ref" inputmode="numeric" placeholder="ej: 123456789" autocomplete="off">' +
+    '</div>' +
     '<label class="campo">Agregar productos</label>' +
     '<div class="buscador"><input id="pedc-bus" placeholder="Buscar por nombre o código…" autocomplete="off"></div>' +
     '<div id="pedc-lista" class="pedc-lista"></div>' +
@@ -3749,6 +3789,25 @@ function formularioPedido() {
       '<button class="btn btn-primario" id="pedc-go">Registrar pedido</button>' +
     '</div>'
   );
+  var _pedModo = 'llevar', _pedPago = 'pago_movil';
+  Array.prototype.forEach.call(document.querySelectorAll('#pedc-modo .seg-btn'), function (b) {
+    b.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('#pedc-modo .seg-btn'), function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      _pedModo = b.getAttribute('data-modo');
+    });
+  });
+  var _swP = el('pedc-pago-sw');
+  function refrescarPagoPed() {
+    _pedPago = _swP.checked ? 'pago_movil' : 'divisas';
+    var caja = el('pedc-ref-caja');
+    if (_pedPago === 'pago_movil') { caja.style.display = ''; el('pedc-ref').disabled = false; }
+    else { caja.style.display = 'none'; el('pedc-ref').disabled = true; }
+    el('pedc-pm-lbl').classList.toggle('on', _pedPago === 'pago_movil');
+    el('pedc-div-lbl').classList.toggle('on', _pedPago === 'divisas');
+  }
+  _swP.addEventListener('change', refrescarPagoPed);
+  refrescarPagoPed();
   function pintarLista() {
     var q = (el('pedc-bus').value || '').trim().toLowerCase();
     var list = prods().filter(function (p) {
@@ -3810,6 +3869,9 @@ function formularioPedido() {
       var r = await API.crearPedidoManual({
         cliente: { nombre: nom, telefono: (el('pedc-tel').value || '').trim() },
         nota: (el('pedc-nota').value || '').trim(),
+        modalidad: _pedModo,
+        metodo_pago: _pedPago,
+        referencia: (_pedPago === 'pago_movil') ? (el('pedc-ref').value || '').trim() : '',
         items: _pedCarrito.map(function (l) { return { codigo: l.codigo, cantidad: l.cantidad }; })
       });
       cerrarModal();
