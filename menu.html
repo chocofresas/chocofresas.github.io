@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c2185b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Menú — FresasChoco</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%93%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --prim:#c2185b; --prim-2:#e91e63; --prim-os:#fdeff5;
+    --choco:#5d3a20; --choco-2:#7a4526; --choco-os:#f3ebe2;
+    --ok:#16a34a; --ok-os:#e7f6ec;
+    --peligro:#dc2626; --avis:#d97706;
+    --fondo:#fdf6f1; --tarjeta:#fff; --texto:#2b1a10; --texto-suave:#9a7260; --borde:#f2ddd0;
+    --sombra:0 1px 3px rgba(93,58,32,.1), 0 8px 22px rgba(93,58,32,.08);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background-color:var(--fondo);color:var(--texto);font-size:15px;padding-bottom:80px;
+    background-image:radial-gradient(rgba(226,36,94,.055) 1.2px,transparent 1.6px),radial-gradient(rgba(93,58,32,.05) 1.2px,transparent 1.6px);
+    background-size:26px 26px,34px 34px;background-position:0 0,13px 13px;
+  }
+  .cab{position:sticky;top:0;z-index:20;
+    background:linear-gradient(100deg,#8d173f 0%,#e0245e 42%,#c0551f 78%,#5d3a20 100%);
+    color:#fff;padding:14px 16px;box-shadow:0 6px 18px rgba(93,58,32,.28)}
+  .marca{font-size:23px;font-weight:900;letter-spacing:.2px;line-height:1.1}
+  .marca em{font-style:italic;color:#ffd5e1}
+  .sub{font-size:12.5px;opacity:.92;margin-top:2px}
+  .cargando{text-align:center;color:var(--texto-suave);padding:40px 16px}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:12px 14px 4px;position:sticky;top:64px;z-index:10;
+    background:linear-gradient(var(--fondo),var(--fondo) 70%,transparent);-webkit-overflow-scrolling:touch}
+  .chip{white-space:nowrap;border:1px solid var(--borde);background:#fff;color:var(--choco);
+    border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}
+  .chip.on{background:var(--prim);border-color:var(--prim);color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;padding:10px 14px 20px}
+  .card{background:var(--tarjeta);border:1px solid var(--borde);border-radius:16px;overflow:hidden;
+    box-shadow:var(--sombra);display:flex;flex-direction:column}
+  .card .foto{height:130px;background:var(--prim-os);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+  .card .foto img{width:100%;height:100%;object-fit:cover}
+  .card .sin{font-size:50px;opacity:.85}
+  .card .agot{position:absolute;inset:0;background:rgba(43,26,16,.6);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;letter-spacing:1px}
+  .card .cuerpo{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+  .card .nom{font-weight:800;line-height:1.2}
+  .card .desc{font-size:12px;color:var(--texto-suave);line-height:1.35;min-height:30px}
+  .card .pie{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto;padding-top:8px}
+  .card .precio{font-weight:900;color:var(--prim);font-size:16px;line-height:1}
+  .card .usd{font-size:11px;color:var(--texto-suave)}
+  .add{border:0;background:var(--prim);color:#fff;width:38px;height:38px;border-radius:12px;font-size:22px;font-weight:700;cursor:pointer;flex:none}
+  .add:disabled{background:#cbb6ab;cursor:default}
+  .cnt{display:flex;align-items:center;gap:8px}
+  .cnt button{border:1px solid var(--borde);background:#fff;width:34px;height:34px;border-radius:10px;font-size:20px;font-weight:700;color:var(--prim);cursor:pointer}
+  .cnt span{min-width:20px;text-align:center;font-weight:800}
+  .barra{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--borde);
+    box-shadow:0 -6px 20px rgba(93,58,32,.14);padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    display:flex;align-items:center;gap:12px}
+  .b-info{flex:1;font-size:13px;color:var(--texto-suave);line-height:1.25}
+  .b-info b{display:block;font-size:17px;color:var(--prim)}
+  .btn-prim{border:0;background:var(--prim);color:#fff;font-weight:800;font-size:15px;padding:12px 18px;border-radius:14px;cursor:pointer}
+  .btn-prim:disabled{opacity:.6}
+  .btn-suave{border:1px solid var(--borde);background:#fff;color:var(--choco);font-weight:700;padding:12px 16px;border-radius:14px;cursor:pointer}
+  .modal{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(43,26,16,.5);padding:0}
+  .hoja{background:#fff;width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:18px;max-height:92vh;overflow-y:auto}
+  .hoja h3{margin:0 0 4px;font-size:19px;color:var(--choco)}
+  .campo{display:block;font-size:12.5px;font-weight:700;color:var(--choco);margin:12px 0 4px}
+  input,textarea{width:100%;border:1px solid var(--borde);border-radius:12px;padding:11px 12px;font:inherit;background:#fff;color:var(--texto)}
+  textarea{resize:vertical}
+  .resumen{border:1px solid var(--borde);border-radius:14px;margin-top:12px;max-height:34vh;overflow-y:auto}
+  .rl{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--borde);font-size:13.5px}
+  .rl:last-child{border-bottom:0}
+  .rl .mono{font-variant-numeric:tabular-nums}
+  .tot{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;font-size:14px;color:var(--texto-suave)}
+  .tot b{font-size:20px;color:var(--prim)}
+  .err{background:#fdecec;color:var(--peligro);border-radius:12px;padding:10px 12px;font-size:13px;margin-top:10px;display:none}
+  .acc{display:flex;gap:10px;margin-top:14px}
+  .acc .btn-prim{flex:1}
+  .confirm{text-align:center;padding:8px 4px 4px}
+  .confirm .nro{font-size:52px;font-weight:900;color:var(--prim);letter-spacing:1px;line-height:1}
+  .confirm .lbl{font-size:14px;color:var(--texto-suave);margin-bottom:8px}
+  .confirm .tot-c{font-size:22px;font-weight:900;margin-top:8px}
+  .fresas{font-size:30px;letter-spacing:6px;margin:6px 0 2px}
+</style>
+</head>
+<body>
+<header class="cab">
+  <div class="marca">🍓 Fresas<em>Choco</em></div>
+  <div class="sub">Nuestro Menú · elige lo que quieras y haz tu pedido</div>
+</header>
+
+<main>
+  <div id="chips" class="chips" hidden></div>
+  <div id="grid" class="grid"><div class="cargando">Cargando menú…🍓</div></div>
+</main>
+
+<div id="barra" class="barra" hidden>
+  <div class="b-info"><span id="b-cant">0</span> producto(s) en tu pedido <b id="b-tot">Bs 0,00</b><span id="b-usd"></span></div>
+  <button class="btn-prim" id="b-ver">Ver mi pedido</button>
+</div>
+
+<div id="modal" class="modal" hidden></div>
+
+<script>
+  /* URL del backend (misma app de FresasChoco). */
+  var URL_API = 'https://script.google.com/macros/s/AKfycby3_MRc7Qczo7ephGu_TMThWyjpzcffA11Nywn2Ioet513FocrxIalvN1j-9FE1MqBPxw/exec';
+
+  var MENU = { tasa: 0, productos: [] };
+  var CARRITO = {};   // codigo -> { producto, cantidad }
+  var CAT = '';
+
+  function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function num(n){ return parseFloat(n)||0; }
+  function fmtNum(n){ return num(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtUSD(n){ return '$ '+fmtNum(n); }
+  function fmtVES(n){ return 'Bs '+fmtNum(n); }
+  function emoji(p){
+    var n = String((p && (p.nombre+' '+(p.categoria||''))) || '').toLowerCase();
+    if(n.indexOf('fresa')>=0) return '🍓';
+    if(n.indexOf('chantill')>=0) return '🌬️';
+    if(n.indexOf('chisp')>=0||n.indexOf('colores')>=0) return '🍬';
+    if(n.indexOf('crema')>=0) return '🍦';
+    if(n.indexOf('arequipe')>=0) return '🍯';
+    if(n.indexOf('pirulin')>=0) return '🍪';
+    if(n.indexOf('palito')>=0) return '🍡';
+    if(n.indexOf('dandy')>=0) return '🍫';
+    if(n.indexOf('bebida')>=0||n.indexOf('malteada')>=0) return '🥤';
+    if(n.indexOf('choco')>=0||n.indexOf('cobertura')>=0) return '🍫';
+    return '🍫';
+  }
+  function el(id){ return document.getElementById(id); }
+
+  function parseResp(o){
+    if(!o || o.ok!==true) throw new Error((o && o.error) || 'El servidor no respondió.');
+    var v = o.r; if(typeof v==='string'){ try{ v=JSON.parse(v); }catch(e){} }
+    return v;
+  }
+
+  function cargar(){
+    return fetch(URL_API+'?accion=getMenuPublico&_='+Date.now())
+      .then(function(r){ return r.json(); })
+      .then(function(o){
+        var v = parseResp(o);
+        MENU.tasa = num(v.tasa);
+        MENU.productos = Array.isArray(v.productos) ? v.productos : [];
+        pintarChips();
+        pintarGrid('');
+      })
+      .catch(function(e){
+        el('grid').innerHTML = '<div class="cargando">⚠️ No se pudo cargar el menú.<br>Revisa tu conexión e inténtalo de nuevo.<br><br>'+
+          '<button class="btn-prim" onclick="location.reload()">Reintentar</button></div>';
+      });
+  }
+
+  function categorias(){
+    var vistos = {}, out = [];
+    MENU.productos.forEach(function(p){
+      var c = String(p.categoria||'General');
+      if(!vistos[c]){ vistos[c]=1; out.push(c); }
+    });
+    return out;
+  }
+
+  function pintarChips(){
+    var cats = categorias();
+    var box = el('chips');
+    if(cats.length < 2){ box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = '<button class="chip on" data-cat="">Todo</button>' +
+      cats.map(function(c){ return '<button class="chip" data-cat="'+esc(c)+'">'+esc(c)+'</button>'; }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.chip'), function(b){
+      b.addEventListener('click', function(){
+        Array.prototype.forEach.call(box.querySelectorAll('.chip'), function(x){ x.classList.remove('on'); });
+        b.classList.add('on');
+        pintarGrid(b.getAttribute('data-cat'));
+        window.scrollTo({top:0,behavior:'smooth'});
+      });
+    });
+  }
+
+  function pintarGrid(cat){
+    CAT = cat || '';
+    var grid = el('grid');
+    var lista = MENU.productos.filter(function(p){ return !CAT || String(p.categoria||'General')===CAT; });
+    if(!lista.length){ grid.innerHTML = '<div class="cargando">Todavía no hay productos en el menú.</div>'; return; }
+    grid.innerHTML = lista.map(function(p){
+      var cod = String(p.codigo);
+      var cant = CARRITO[cod] ? CARRITO[cod].cantidad : 0;
+      var agotado = num(p.stock) <= 0;
+      var foto = p.imagen
+        ? '<img src="'+esc(p.imagen)+'" alt="'+esc(p.nombre)+'" loading="lazy">'
+        : '<div class="sin">'+emoji(p)+'</div>';
+      var acc = agotado
+        ? '<span class="usd" style="color:var(--peligro);font-weight:800">Agotado</span>'
+        : (cant > 0
+          ? '<span class="cnt"><button data-menos="'+esc(cod)+'">−</button><span>'+cant+'</span><button data-mas="'+esc(cod)+'">+</button></span>'
+          : '<button class="add" data-mas="'+esc(cod)+'" aria-label="Agregar">＋</button>');
+      return '<div class="card">'+
+        '<div class="foto">'+foto+(agotado?'<div class="agot">AGOTADO</div>':'')+'</div>'+
+        '<div class="cuerpo">'+
+          '<div class="nom">'+esc(p.nombre)+'</div>'+
+          '<div class="desc">'+(p.descripcion?esc(p.descripcion):'')+'</div>'+
+          '<div class="pie">'+
+            '<div><div class="precio">'+fmtVES(num(p.precio_usd)*MENU.tasa)+'</div><div class="usd">'+fmtUSD(p.precio_usd)+'</div></div>'+
+            acc+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+    Array.prototype.forEach.call(grid.querySelectorAll('[data-mas]'), function(b){
+      b.addEventListener('click', function(){ agregar(b.getAttribute('data-mas'), 1); });
+    });
+    Array.prototype.forEach.call(grid.querySelectorAll('[data-menos]'), function(b){
+      b.addEventListener('click', function(){ agregar(b.getAttribute('data-menos'), -1); });
+    });
+  }
+
+  function agregar(cod, d){
+    var p = MENU.productos.filter(function(x){ return String(x.codigo)===cod; })[0];
+    if(!p || num(p.stock)<=0) return;
+    if(!CARRITO[cod]) CARRITO[cod] = { producto: p, cantidad: 0 };
+    CARRITO[cod].cantidad += d;
+    if(CARRITO[cod].cantidad <= 0) delete CARRITO[cod];
+    pintarGrid(CAT);
+    pintarBarra();
+  }
+
+  function totales(){
+    var cant = 0, usd = 0;
+    Object.keys(CARRITO).forEach(function(k){ cant += CARRITO[k].cantidad; usd += CARRITO[k].cantidad * num(CARRITO[k].producto.precio_usd); });
+    return { cant: cant, usd: usd };
+  }
+
+  function pintarBarra(){
+    var t = totales();
+    var b = el('barra');
+    if(!t.cant){ b.hidden = true; return; }
+    b.hidden = false;
+    el('b-cant').textContent = t.cant;
+    el('b-tot').textContent = fmtVES(t.usd * MENU.tasa);
+    el('b-usd').textContent = ' · ' + fmtUSD(t.usd);
+  }
+
+  function cerrarModal(){ el('modal').hidden = true; el('modal').innerHTML=''; }
+
+  function abrirCheckout(){
+    var t = totales();
+    if(!t.cant){ return; }
+    var lineas = Object.keys(CARRITO).map(function(k){
+      var l = CARRITO[k];
+      return '<div class="rl"><span>'+l.cantidad+'× '+esc(l.producto.nombre)+'</span><span class="mono">'+fmtUSD(l.cantidad*num(l.producto.precio_usd))+'</span></div>';
+    }).join('');
+    el('modal').innerHTML =
+      '<div class="hoja">'+
+        '<h3>🛎️ Tu pedido</h3>'+
+        '<p style="margin:4px 0;color:var(--texto-suave);font-size:13px">Escribe tu nombre para que sepamos de quién es el pedido.</p>'+
+        '<label class="campo">Tu nombre *</label><input id="c-nom" placeholder="ej: María" autocomplete="name">'+
+        '<label class="campo">Teléfono (opcional)</label><input id="c-tel" inputmode="tel" autocomplete="tel">'+
+        '<div class="resumen">'+lineas+'</div>'+
+        '<div class="tot"><span>Total</span><b>'+fmtVES(t.usd*MENU.tasa)+'</b></div>'+
+        '<div style="text-align:right;color:var(--texto-suave);font-size:12.5px">'+fmtUSD(t.usd)+' (tasa '+fmtNum(MENU.tasa)+')</div>'+
+        '<label class="campo">Nota (opcional)</label><textarea id="c-nota" rows="2" placeholder="ej: sin arequipe, para llevar…"></textarea>'+
+        '<div class="err" id="c-err"></div>'+
+        '<div class="acc"><button class="btn-suave" id="c-cancel">Seguir eligiendo</button>'+
+        '<button class="btn-prim" id="c-ok">Confirmar pedido</button></div>'+
+      '</div>';
+    el('modal').hidden = false;
+    el('c-cancel').addEventListener('click', cerrarModal);
+    el('c-ok').addEventListener('click', confirmar);
+    el('c-nom').focus();
+  }
+
+  async function confirmar(){
+    var err = el('c-err'); err.style.display='none';
+    var nom = (el('c-nom').value||'').trim();
+    if(!nom){ err.textContent='Escribe tu nombre.'; err.style.display='block'; return; }
+    var items = Object.keys(CARRITO).map(function(k){ return { codigo:k, cantidad:CARRITO[k].cantidad }; });
+    if(!items.length){ err.textContent='Tu pedido está vacío.'; err.style.display='block'; return; }
+    var btn = el('c-ok'); btn.disabled = true; btn.textContent = 'Enviando…';
+    try{
+      var datos = { items: items, cliente: { nombre: nom, telefono: (el('c-tel').value||'').trim() }, nota: (el('c-nota').value||'').trim() };
+      var r = await fetch(URL_API+'?accion=crearPedidoPublico&args='+encodeURIComponent(JSON.stringify([datos])));
+      var o = await r.json();
+      var v = parseResp(o);
+      CARRITO = {};
+      pintarBarra();
+      pintarGrid(CAT);
+      mostrarConfirmacion(v.pedido);
+    }catch(e){
+      err.textContent = '⚠️ ' + ((e && e.message) || 'No se pudo enviar el pedido.');
+      err.style.display='block';
+      btn.disabled = false; btn.textContent = 'Confirmar pedido';
+    }
+  }
+
+  function mostrarConfirmacion(ped){
+    var nro = (ped && ped.numero) ? String(ped.numero).replace(/\D/g, '') : '';
+    nro = nro ? ('0000' + nro).slice(-4) : ((ped && ped.numero) ? String(ped.numero) : '—');
+    var usd = ped ? num(ped.total_usd) : 0;
+    var ves = ped ? num(ped.total_ves) : 0;
+    el('modal').innerHTML =
+      '<div class="hoja"><div class="confirm">'+
+        '<div class="fresas">🍓🍫🍦</div>'+
+        '<div class="lbl">¡Tu pedido fue recibido!</div>'+
+        '<div style="font-size:14px;font-weight:800;color:var(--choco)">NÚMERO DE ORDEN</div>'+
+        '<div class="nro">#'+esc(nro)+'</div>'+
+        '<div class="tot-c">'+fmtVES(ves)+'</div>'+
+        '<div style="color:var(--texto-suave);font-size:13px">'+fmtUSD(usd)+'</div>'+
+        '<p style="color:var(--texto-suave);font-size:13px;margin-top:14px">Guarda tu número. El equipo preparará tu pedido en orden de llegada.</p>'+
+        '<div class="acc"><button class="btn-prim" id="c-otro" style="width:100%">Hacer otro pedido</button></div>'+
+      '</div></div>';
+    el('modal').hidden = false;
+    el('c-otro').addEventListener('click', function(){ cerrarModal(); window.scrollTo({top:0}); });
+  }
+
+  el('b-ver').addEventListener('click', abrirCheckout);
+  el('modal').addEventListener('click', function(e){ if(e.target===el('modal')) cerrarModal(); });
+  cargar();
+</script>
+</body>
+</html>
