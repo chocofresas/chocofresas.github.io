@@ -80,6 +80,18 @@
   .err{background:#fdecec;color:var(--peligro);border-radius:12px;padding:10px 12px;font-size:13px;margin-top:10px;display:none}
   .acc{display:flex;gap:10px;margin-top:14px}
   .acc .btn-prim{flex:1}
+  .seg{display:flex;gap:8px;margin-top:4px}
+  .seg-btn{flex:1;border:1px solid var(--borde);background:#fff;color:var(--choco);border-radius:12px;padding:11px 8px;font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit}
+  .seg-btn.on{background:var(--prim);border-color:var(--prim);color:#fff}
+  .pago-fila{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:6px}
+  .pago-lbl{font-size:13px;font-weight:800;color:var(--texto-suave);opacity:.6;transition:opacity .15s,color .15s}
+  .pago-lbl.on{color:var(--prim);opacity:1}
+  .switch{position:relative;display:inline-block;width:54px;height:30px;flex:none}
+  .switch input{opacity:0;width:0;height:0;position:absolute}
+  .switch .sw{position:absolute;inset:0;background:#cbb6ab;border-radius:999px;transition:background .2s;cursor:pointer}
+  .switch .sw::before{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .switch input:checked + .sw{background:var(--prim)}
+  .switch input:checked + .sw::before{transform:translateX(24px)}
   .confirm{text-align:center;padding:8px 4px 4px}
   .confirm .nro{font-size:52px;font-weight:900;color:var(--prim);letter-spacing:1px;line-height:1}
   .confirm .lbl{font-size:14px;color:var(--texto-suave);margin-bottom:8px}
@@ -112,6 +124,8 @@
   var MENU = { tasa: 0, productos: [] };
   var CARRITO = {};   // codigo -> { producto, cantidad }
   var CAT = '';
+  var MODO = 'llevar';       // 'llevar' | 'comer'
+  var PAGO = 'pago_movil';   // 'pago_movil' | 'divisas'
 
   function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function num(n){ return parseFloat(n)||0; }
@@ -260,6 +274,21 @@
         '<p style="margin:4px 0;color:var(--texto-suave);font-size:13px">Escribe tu nombre para que sepamos de quién es el pedido.</p>'+
         '<label class="campo">Tu nombre *</label><input id="c-nom" placeholder="ej: María" autocomplete="name">'+
         '<label class="campo">Teléfono (opcional)</label><input id="c-tel" inputmode="tel" autocomplete="tel">'+
+        '<label class="campo">¿Para llevar o comer aquí?</label>'+
+        '<div class="seg" id="c-modo">'+
+          '<button type="button" class="seg-btn on" data-modo="llevar">🛍️ Para llevar</button>'+
+          '<button type="button" class="seg-btn" data-modo="comer">🍽️ Comer aquí</button>'+
+        '</div>'+
+        '<label class="campo">Método de pago</label>'+
+        '<div class="pago-fila">'+
+          '<span class="pago-lbl on" id="c-pm-lbl">📲 Pago Móvil</span>'+
+          '<label class="switch"><input type="checkbox" id="c-pago-sw" checked><span class="sw"></span></label>'+
+          '<span class="pago-lbl" id="c-div-lbl">💵 Divisas</span>'+
+        '</div>'+
+        '<div id="c-ref-caja">'+
+          '<label class="campo">Referencia del Pago Móvil</label>'+
+          '<input id="c-ref" inputmode="numeric" placeholder="ej: 123456789" autocomplete="off">'+
+        '</div>'+
         '<div class="resumen">'+lineas+'</div>'+
         '<div class="tot"><span>Total</span><b>'+fmtVES(t.usd*MENU.tasa)+'</b></div>'+
         '<div style="text-align:right;color:var(--texto-suave);font-size:12.5px">'+fmtUSD(t.usd)+' (tasa '+fmtNum(MENU.tasa)+')</div>'+
@@ -271,6 +300,27 @@
     el('modal').hidden = false;
     el('c-cancel').addEventListener('click', cerrarModal);
     el('c-ok').addEventListener('click', confirmar);
+    // Modo de consumo (Para llevar / Comer aquí)
+    MODO = 'llevar';
+    Array.prototype.forEach.call(document.querySelectorAll('#c-modo .seg-btn'), function(b){
+      b.addEventListener('click', function(){
+        Array.prototype.forEach.call(document.querySelectorAll('#c-modo .seg-btn'), function(x){ x.classList.remove('on'); });
+        b.classList.add('on');
+        MODO = b.getAttribute('data-modo');
+      });
+    });
+    // Método de pago (Pago Móvil / Divisas) — por defecto Pago Móvil
+    var sw = el('c-pago-sw');
+    function refrescarPago(){
+      PAGO = sw.checked ? 'pago_movil' : 'divisas';
+      var caja = el('c-ref-caja');
+      if(PAGO === 'pago_movil'){ caja.style.display = ''; el('c-ref').disabled = false; }
+      else { caja.style.display = 'none'; el('c-ref').disabled = true; }
+      el('c-pm-lbl').classList.toggle('on', PAGO === 'pago_movil');
+      el('c-div-lbl').classList.toggle('on', PAGO === 'divisas');
+    }
+    sw.addEventListener('change', refrescarPago);
+    refrescarPago();
     el('c-nom').focus();
   }
 
@@ -282,7 +332,9 @@
     if(!items.length){ err.textContent='Tu pedido está vacío.'; err.style.display='block'; return; }
     var btn = el('c-ok'); btn.disabled = true; btn.textContent = 'Enviando…';
     try{
-      var datos = { items: items, cliente: { nombre: nom, telefono: (el('c-tel').value||'').trim() }, nota: (el('c-nota').value||'').trim() };
+      var datos = { items: items, cliente: { nombre: nom, telefono: (el('c-tel').value||'').trim() }, nota: (el('c-nota').value||'').trim(),
+        modalidad: MODO, metodo_pago: PAGO,
+        referencia: (PAGO === 'pago_movil') ? (el('c-ref').value||'').trim() : '' };
       var r = await fetch(URL_API+'?accion=crearPedidoPublico&args='+encodeURIComponent(JSON.stringify([datos])));
       var o = await r.json();
       var v = parseResp(o);
@@ -310,6 +362,11 @@
         '<div class="nro">#'+esc(nro)+'</div>'+
         '<div class="tot-c">'+fmtVES(ves)+'</div>'+
         '<div style="color:var(--texto-suave);font-size:13px">'+fmtUSD(usd)+'</div>'+
+        '<div style="margin-top:10px;font-size:13px;font-weight:700;color:var(--choco)">'+
+          (ped && ped.modalidad === 'comer' ? '🍽️ Comer aquí' : '🛍️ Para llevar')+' · '+
+          (ped && ped.metodo_pago === 'divisas' ? '💵 Divisas' : '📲 Pago Móvil')+
+          (ped && ped.referencia ? ' (Ref: '+esc(ped.referencia)+')' : '')+
+        '</div>'+
         '<p style="color:var(--texto-suave);font-size:13px;margin-top:14px">Guarda tu número. El equipo preparará tu pedido en orden de llegada.</p>'+
         '<div class="acc"><button class="btn-prim" id="c-otro" style="width:100%">Hacer otro pedido</button></div>'+
       '</div></div>';
