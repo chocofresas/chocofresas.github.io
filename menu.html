@@ -328,6 +328,7 @@
     var err = el('c-err'); err.style.display='none';
     var nom = (el('c-nom').value||'').trim();
     if(!nom){ err.textContent='Escribe tu nombre.'; err.style.display='block'; return; }
+    if(PAGO === 'pago_movil' && !(el('c-ref').value||'').trim()){ err.textContent='Escribe la referencia de tu Pago Móvil (o cambia a Divisas).'; err.style.display='block'; return; }
     var items = Object.keys(CARRITO).map(function(k){ return { codigo:k, cantidad:CARRITO[k].cantidad }; });
     if(!items.length){ err.textContent='Tu pedido está vacío.'; err.style.display='block'; return; }
     var btn = el('c-ok'); btn.disabled = true; btn.textContent = 'Enviando…';
