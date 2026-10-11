@@ -974,6 +974,7 @@ function fmtUSD(n) { return '$ ' + fmtNum(n); }
 function fmtVES(n) { return 'Bs ' + fmtNum(n); }
 function fmtCant(n) { var v = num(n); return (v % 1 === 0) ? String(v) : v.toFixed(2); }
 function fechaCorta(s) { return String(s == null ? '' : s).slice(0, 10); }
+var DIAS_CORTOS = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 function fechaHora(s) { if (!s) return '—'; return String(s).slice(0, 16).replace('T', ' '); }
 function hoyLocal() {
   var d = new Date();
@@ -1158,8 +1159,15 @@ var API = {
   listarEmpleados: function () { return apiLlamada('listarEmpleados', [S.tok]); },
   guardarEmpleado: function (e) { return apiGrabar('guardarEmpleado', [S.tok, e], ['empleados', 'dashboard']); },
   listarSueldos: function (f) { return apiLlamada('listarSueldos', [S.tok, f || {}]); },
-  registrarSueldo: function (s) { return apiGrabar('registrarSueldo', [S.tok, s], ['sueldos', 'dashboard']); },
-  cambiarEstadoSueldo: function (id, e) { return apiGrabar('cambiarEstadoSueldo', [S.tok, id, e], ['sueldos', 'dashboard']); },
+  registrarSueldo: function (s) { return apiGrabar('registrarSueldo', [S.tok, s], ['sueldos', 'nomina', 'dashboard']); },
+  cambiarEstadoSueldo: function (id, e) { return apiGrabar('cambiarEstadoSueldo', [S.tok, id, e], ['sueldos', 'nomina', 'dashboard']); },
+  // --- Nómina con sueldo diario (V2.2) ---
+  getNomina: function () { return apiLlamada('getNomina', [S.tok]); },
+  diasPendientes: function (empleado_id) { return apiLlamada('diasPendientes', [S.tok, empleado_id]); },
+  registrarPagoSueldo: function (d) { return apiGrabar('registrarPagoSueldo', [S.tok, d], ['sueldos', 'nomina', 'dashboard']); },
+  corridaNominaManual: function () { return apiGrabar('corridaNominaManual', [S.tok], ['sueldos', 'nomina', 'dashboard']); },
+  instalarTriggersNomina: function () { return apiGrabar('instalarTriggersNomina', [S.tok], []); },
+  estadoTriggersNomina: function () { return apiLlamada('estadoTriggersNomina', [S.tok]); },
   listarRemodelaciones: function () { return apiLlamada('listarRemodelaciones', [S.tok]); },
   guardarRemodelacion: function (r) { return apiGrabar('guardarRemodelacion', [S.tok, r], ['remodelaciones']); },
   listarRemodGastos: function (rid) { return apiLlamada('listarRemodGastos', [S.tok, rid]); },
@@ -1279,7 +1287,9 @@ function mockApi(fn, args) {
         ventasHoy: { cantidad: 12, usd: 845.2, ves: 721378 },
         ventasMes: { cantidad: 310, usd: 21590, ves: 18427350 },
         gastosMes: { cantidad: 8, usd: 1250 },
-        sueldosPendientes: 2,
+        sueldosPagadosMes: { cantidad: 1, usd: 30 },
+        egresosMes: { cantidad: 9, usd: 1280 },
+        sueldosPendientes: { dias: 2, usd: 40 },
         stockBajo: [insumosMock[2]],
         totalProductos: prods.length,
         totalInsumos: insumosMock.length
@@ -1299,8 +1309,12 @@ function mockApi(fn, args) {
     },
     listarGastos: function () { return [{ id: 'G1', fecha: '2026-09-22', concepto: 'Combustible camioneta', categoria: 'Transporte', monto_usd: 20, responsable: '', nota: '' }]; },
     listarUsuarios: function () { return [{ usuario: 'admin', nombre: 'Administrador', rol: 'admin', activo: 1 }, { usuario: 'caja', nombre: 'Cajero', rol: 'empleado', activo: 1 }]; },
-    listarEmpleados: function () { return [{ id: 'E1', nombre: 'Juan Pérez', cargo: 'Albañil', salario_usd: 220, fecha_ingreso: '2026-01-10', activo: 1 }]; },
-    listarSueldos: function () { return [{ id: 'S1', empleado_id: 'E1', empleado_nombre: 'Juan Pérez', periodo: '2026-09', fecha_pago: '', monto_usd: 220, estado: 'pendiente', nota: '' }]; },
+    listarEmpleados: function () { return [{ id: 'E1', nombre: 'Juan Pérez', cargo: 'Albañil', salario_usd: 10, sueldo_diario: 10, dias_semana: '1,2,3,4,5', fecha_ingreso: '2026-01-10', activo: 1 }]; },
+    listarSueldos: function () { return [{ id: 'S1', empleado_id: 'E1', empleado_nombre: 'Juan Pérez', periodo: '2026-09', fecha_dia: '2026-09-23', fecha_pago: '', monto_usd: 10, estado: 'pendiente', nota: '' }]; },
+    getNomina: function () { return { esAdmin: true, mes: '2026-09', empleados: [{ id: 'E1', nombre: 'Juan Pérez', cargo: 'Albañil', activo: 1, sueldo_diario: 10, dias_semana: '1,2,3,4,5', dias_txt: 'Lun · Mar · Mié · Jue · Vie', fecha_ingreso: '2026-01-10', pend_dias: 2, pend_usd: 20 }], kpis: { pend_usd: 20, pend_dias: 2, pag_mes_usd: 30, pag_mes_dias: 3 }, pagos: [{ fecha: '2026-09-23', empleado: 'Juan Pérez', dias: 3, usd: 30 }] }; },
+    diasPendientes: function () { return [{ id: 'S1', fecha_dia: '2026-09-23', periodo: '2026-09', monto_usd: 10, nota: '' }, { id: 'S2', fecha_dia: '2026-09-24', periodo: '2026-09', monto_usd: 10, nota: '' }]; },
+    registrarPagoSueldo: function () { return { ok: true, pagados: 2, faltas: 0, total_usd: 20 }; },
+    estadoTriggersNomina: function () { return { total: 2 }; },
     listarRemodelaciones: function () { return [{ id: 'R1', nombre: 'Remodelación sala', tipo: 'Remodelación', descripcion: 'Pintura y piso', estado: 'En progreso', progreso: 60, fecha_inicio: '2026-08-01', fecha_fin_estimada: '2026-10-15' }]; },
     listarRemodGastos: function () { return []; },
     marcarEnMenu: function () { return prods[0]; },
@@ -2068,12 +2082,14 @@ render.inicio = async function () {
         gastosMes: { cantidad: 0, usd: 0 },
         egresosMes: { cantidad: 0, usd: 0 },
         sueldosPagadosMes: { cantidad: 0, usd: 0 },
-        sueldosPendientes: 0,
+        sueldosPendientes: { dias: 0, usd: 0 },
         stockBajo: [],
         totalProductos: 0
       };
     }
     if (typeof d.menuAbierto === 'undefined') d.menuAbierto = true;
+    if (typeof d.sueldosPendientes === 'number') d.sueldosPendientes = { dias: d.sueldosPendientes, usd: 0 };
+    if (!d.sueldosPendientes) d.sueldosPendientes = { dias: 0, usd: 0 };
     if (S.tasa === null && d.tasa && num(d.tasa.tasa)) {
       S.tasa = num(d.tasa.tasa);
       S.tasaManual = !!d.tasa.manual;
@@ -2105,7 +2121,7 @@ render.inicio = async function () {
       kpi('📈 Ventas del mes', fmtUSD(d.ventasMes.usd), fmtVES(d.ventasMes.ves), d.ventasMes.cantidad + ' pedidos', 'k-azul', 'reportes') +
       kpi('💸 Gastos del mes', fmtUSD(d.gastosMes.usd), fmtVES(d.gastosMes.usd * (S.tasa || 0)), d.gastosMes.cantidad + ' registros', 'k-rojo', 'gastos') +
       kpi('💸 Egresos del mes', fmtUSD(d.egresosMes.usd), fmtVES(d.egresosMes.usd * (S.tasa || 0)), d.egresosMes.cantidad + ' pagos (gastos + sueldos + obras)', 'k-rojo', 'reportes') +
-      kpi('💰 Sueldos pendientes', String(d.sueldosPendientes), 'de este mes', '', 'k-naranja', 'nomina') +
+      kpi('💰 Sueldos pendientes', fmtUSD(d.sueldosPendientes.usd), (d.sueldosPendientes.dias || 0) + ' días', 'por pagar', 'k-naranja', 'nomina') +
       kpi('📖 Productos del menú', String(d.totalProductos), 'activos', '', 'k-azul', 'menu') +
       kpi('📦 Insumos', String(d.totalInsumos || 0), 'materia prima', (d.stockBajo && d.stockBajo.length) + ' bajo el mínimo', 'k-naranja', 'insumos') +
       '</div>' +
@@ -3306,14 +3322,18 @@ async function renderSubEmpleados() {
   var aplicar = function (emp) {
     if (!emp.length) { el('e-lista').innerHTML = '<div class="tarjeta muted">Aún no hay empleados.</div>'; return; }
     el('e-lista').innerHTML = '<div class="tabla-envoltura"><table class="tabla"><thead><tr>' +
-      '<th>Nombre</th><th>Cargo</th><th class="der">Salario $</th><th class="der">Bs</th><th>Ingreso</th><th>Estado</th>' +
+      '<th>Nombre</th><th>Cargo</th><th class="der">Sueldo/día $</th><th>Días que trabaja</th><th class="der">Bs/día</th><th>Ingreso</th><th>Estado</th>' +
       (S.rol === 'admin' ? '<th></th>' : '') + '</tr></thead><tbody>' +
       emp.map(function (e, i) {
+        var sd = num(e.sueldo_diario || e.salario_usd);
+        var dias = diasSemanaTexto(e.dias_semana);
+        var faltaConf = (!num(e.sueldo_diario || e.salario_usd) || !e.dias_semana) ? ' <span class="etq etq-peligro" title="Falta configurar sueldo diario o días">⚠️</span>' : '';
         return '<tr' + (String(e.activo) !== '1' ? ' style="opacity:.45"' : '') + '>' +
-          '<td class="negrita">' + esc(e.nombre) + '</td>' +
+          '<td class="negrita">' + esc(e.nombre) + faltaConf + '</td>' +
           '<td>' + esc(e.cargo) + '</td>' +
-          '<td class="der">' + fmtUSD(e.salario_usd) + '</td>' +
-          '<td class="der muted">' + fmtVES(e.salario_usd * (S.tasa || 0)) + '</td>' +
+          '<td class="der">' + fmtUSD(sd) + '</td>' +
+          '<td>' + esc(dias) + '</td>' +
+          '<td class="der muted">' + fmtVES(sd * (S.tasa || 0)) + '</td>' +
           '<td>' + fechaCorta(e.fecha_ingreso) + '</td>' +
           '<td>' + (String(e.activo) === '1' ? '<span class="etq etq-ok">Activo</span>' : '<span class="etq etq-peligro">Inactivo</span>') + '</td>' +
           (S.rol === 'admin' ? '<td><button class="btn" style="padding:6px 10px" data-ed="' + i + '">✏️</button></td>' : '') +
@@ -3334,115 +3354,210 @@ async function renderSubEmpleados() {
 function formularioEmpleado(e) {
   var ed = !!(e && e.id);
   var v = e || {};
+  var diasSel = String(v.dias_semana || '').split(',');
+  var chks = '';
+  for (var n = 1; n <= 7; n++) {
+    var on = diasSel.indexOf(String(n)) >= 0;
+    chks += '<label style="display:flex;align-items:center;gap:4px;background:#f4f4f5;border-radius:8px;padding:6px 10px;font-size:13px">' +
+      '<input type="checkbox" class="em-dia" value="' + n + '" style="width:auto"' + (on ? ' checked' : '') + '>' + DIAS_CORTOS[n] + '</label>';
+  }
+  var salVal = (v.sueldo_diario != null && v.sueldo_diario !== '') ? v.sueldo_diario : (v.salario_usd || '');
   abrirModal(
     '<div class="modal-tope"><h3>' + (ed ? 'Editar empleado' : 'Nuevo empleado') + '</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
     '<label class="campo">Nombre</label><input id="em-nom" value="' + esc(v.nombre || '') + '">' +
     '<div class="form-2col">' +
     '<div><label class="campo">Cargo</label><input id="em-cargo" value="' + esc(v.cargo || '') + '"></div>' +
-    '<div><label class="campo">Salario ($)</label><input id="em-sal" type="number" step="0.01" min="0" value="' + esc(v.salario_usd || '') + '"></div>' +
+    '<div><label class="campo">Sueldo diario ($)</label><input id="em-sal" type="number" step="0.01" min="0" value="' + esc(salVal) + '"></div>' +
     '</div>' +
-    '<label class="campo">Fecha de ingreso</label><input type="date" id="em-fecha" value="' + (v.fecha_ingreso || hoyLocal()) + '">' +
+    '<label class="campo">Días que trabaja</label>' +
+    '<div id="em-dias" style="display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 10px">' + chks + '</div>' +
+    '<label class="campo">Fecha de ingreso</label><input type="date" id="em-fecha" value="' + (fechaCorta(v.fecha_ingreso) || hoyLocal()) + '">' +
     '<label class="campo"><input type="checkbox" id="em-act" style="width:auto"' + (String(v.activo) !== '0' ? ' checked' : '') + '> Activo</label>' +
     '<div class="modal-acciones"><button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
     '<button class="btn btn-primario" id="em-guardar">Guardar</button></div>'
   );
   el('em-guardar').addEventListener('click', async function () {
+    var dias = [];
+    Array.prototype.forEach.call(document.querySelectorAll('#em-dias .em-dia'), function (c) { if (c.checked) dias.push(c.value); });
     try {
       await API.guardarEmpleado({
         id: v.id, nombre: el('em-nom').value, cargo: el('em-cargo').value,
-        salario_usd: num(el('em-sal').value), fecha_ingreso: el('em-fecha').value,
+        sueldo_diario: num(el('em-sal').value), dias_semana: dias.join(','),
+        fecha_ingreso: el('em-fecha').value,
         activo: el('em-act').checked ? 1 : 0
       });
       cerrarModal(); toast('Empleado guardado', 'ok'); irA('nomina', { sub: 'empleados' });
-    } catch (e) { toast(e.message, 'error'); }
+    } catch (err) { toast(err.message, 'error'); }
   });
 }
 
 async function renderSubSueldos() {
   var cont = el('nom-cont');
-  var mes = hoyLocal().slice(0, 7);
-  cont.innerHTML = '<div class="tarjeta">' +
-    '<div class="form-2col">' +
-    '<div><label class="campo">Periodo</label><input type="month" id="s-periodo" value="' + mes + '"></div>' +
-    (S.rol === 'admin' ? '<div style="display:flex;align-items:flex-end"><button class="btn btn-primario btn-ancho" id="s-nuevo">＋ Registrar pago</button></div>' : '') +
-    '</div></div><div id="s-lista"></div>';
-  if (S.rol === 'admin') el('s-nuevo').addEventListener('click', formularioSueldo);
-  el('s-periodo').addEventListener('change', cargar);
+  cont.innerHTML = '<div id="s-lista"></div>';
   async function cargar() {
-    var p = el('s-periodo').value;
-    var aplicar = function (lista) {
-      var pag = lista.filter(function (s) { return String(s.estado) === 'pagado'; });
-      var pend = lista.filter(function (s) { return String(s.estado) === 'pendiente'; });
-      var pagUSD = pag.reduce(function (a, s) { return a + num(s.monto_usd); }, 0);
-      var pendUSD = pend.reduce(function (a, s) { return a + num(s.monto_usd); }, 0);
-      el('s-lista').innerHTML = '<div class="grid-cards">' +
-        '<div class="card-kpi"><div class="k-etiq">Registros del periodo</div><div class="k-num k-azul">' + lista.length + '</div></div>' +
-        '<div class="card-kpi"><div class="k-etiq">Pagado $</div><div class="k-num k-verde">' + fmtUSD(pagUSD) + '</div></div>' +
-        '<div class="card-kpi"><div class="k-etiq">Pendiente $</div><div class="k-num k-rojo">' + fmtUSD(pendUSD) + '</div></div>' +
+    var aplicar = function (n) {
+      n = n || {};
+      var emp = n.empleados || [];
+      var k = n.kpis || {};
+      var pagos = n.pagos || [];
+      var activos = emp.filter(function (e) { return String(e.activo) === '1'; });
+      var pend = emp.filter(function (e) { return num(e.pend_dias) > 0; });
+      el('s-lista').innerHTML =
+        '<div class="grid-cards">' +
+        '<div class="card-kpi"><div class="k-etiq">Pendiente por pagar</div><div class="k-num k-rojo">' + fmtUSD(k.pend_usd) + '</div><div class="k-etiq">' + (k.pend_dias || 0) + ' días</div></div>' +
+        '<div class="card-kpi"><div class="k-etiq">Pagado este mes</div><div class="k-num k-verde">' + fmtUSD(k.pag_mes_usd) + '</div><div class="k-etiq">' + (k.pag_mes_dias || 0) + ' días</div></div>' +
         '</div>' +
-        (!lista.length ? '<div class="tarjeta muted" style="margin-top:12px">Sin registros para ' + esc(p) + '.</div>' :
-          '<div class="tabla-envoltura" style="margin-top:12px"><table class="tabla"><thead><tr>' +
-          '<th>Empleado</th><th>Periodo</th><th class="der">Monto $</th><th class="der">Bs</th><th>Fecha pago</th><th>Estado</th>' +
-          (S.rol === 'admin' ? '<th></th>' : '') + '</tr></thead><tbody>' +
-          lista.map(function (s, i) {
-            return '<tr><td class="negrita">' + esc(s.empleado_nombre) + '</td>' +
-              '<td>' + esc(String(s.periodo || '').slice(0, 7)) + '</td>' +
-              '<td class="der">' + fmtUSD(s.monto_usd) + '</td>' +
-              '<td class="der muted">' + fmtVES(s.monto_usd * (S.tasa || 0)) + '</td>' +
-              '<td>' + (s.fecha_pago ? fechaCorta(s.fecha_pago) : '—') + '</td>' +
-              '<td>' + (String(s.estado) === 'pagado' ? '<span class="etq etq-ok">Pagado</span>' : '<span class="etq etq-peligro">Pendiente</span>') + '</td>' +
-              (S.rol === 'admin' ? '<td>' + (String(s.estado) !== 'pagado' ? '<button class="btn btn-ok" style="padding:6px 10px" data-pagar="' + i + '">Pagar</button>' : '') + '</td>' : '') +
-              '</tr>';
-          }).join('') + '</tbody></table></div>');
+        '<div class="tarjeta"><div class="fila-entre"><h2 style="margin:0">💰 Pendientes por empleado</h2>' +
+        (S.rol === 'admin' ? '<button class="btn btn-primario" id="s-nuevo">＋ Registrar pago</button>' : '') + '</div>' +
+        (pend.length
+          ? '<div class="tabla-envoltura"><table class="tabla"><thead><tr>' +
+            '<th>Empleado</th><th>Días que trabaja</th><th class="der">Sueldo/día $</th><th class="der">Días</th><th class="der">Pendiente $</th>' +
+            (S.rol === 'admin' ? '<th></th>' : '') + '</tr></thead><tbody>' +
+            pend.map(function (e) {
+              return '<tr><td class="negrita">' + esc(e.nombre) + '</td>' +
+                '<td class="muted">' + esc(e.dias_txt) + '</td>' +
+                '<td class="der">' + fmtUSD(e.sueldo_diario) + '</td>' +
+                '<td class="der">' + e.pend_dias + '</td>' +
+                '<td class="der negrita k-rojo">' + fmtUSD(e.pend_usd) + '</td>' +
+                (S.rol === 'admin' ? '<td><button class="btn btn-ok" style="padding:6px 10px" data-pagar="' + esc(e.id) + '">Pagar</button></td>' : '') +
+                '</tr>';
+            }).join('') + '</tbody></table></div>'
+          : '<div class="muted" style="margin-top:8px">No hay sueldos pendientes. 🎉</div>') +
+        '</div>' +
+        (S.rol === 'admin'
+          ? '<div class="tarjeta"><div class="fila-entre"><div><strong>⏰ Corrida automática</strong><br>' +
+            '<span class="muted" id="s-trig-estado">Consultando…</span></div>' +
+            '<div class="fila-botones"><button class="btn" id="s-rec">🔄 Recalcular</button>' +
+            '<button class="btn" id="s-trig">Activar / reparar</button></div></div></div>'
+          : '') +
+        '<div class="tarjeta"><h2>🧾 Pagos de ' + esc(n.mes || '') + '</h2>' +
+        (pagos.length
+          ? '<div class="tabla-envoltura"><table class="tabla"><thead><tr><th>Fecha</th><th>Empleado</th><th class="der">Días</th><th class="der">Monto $</th><th class="der">Bs</th></tr></thead><tbody>' +
+            pagos.map(function (p) {
+              return '<tr><td>' + fechaCorta(p.fecha) + '</td><td>' + esc(p.empleado) + '</td>' +
+                '<td class="der">' + p.dias + '</td><td class="der">' + fmtUSD(p.usd) + '</td>' +
+                '<td class="der muted">' + fmtVES(p.usd * (S.tasa || 0)) + '</td></tr>';
+            }).join('') + '</tbody></table></div>'
+          : '<div class="muted" style="margin-top:8px">Sin pagos este mes.</div>') +
+        '</div>';
       if (S.rol === 'admin') {
+        if (el('s-nuevo')) el('s-nuevo').addEventListener('click', function () {
+          var conP = activos.filter(function (e) { return num(e.pend_dias) > 0; });
+          if (!conP.length) { toast('No hay días pendientes por pagar', 'error'); return; }
+          if (conP.length === 1) formularioPagoSueldo(conP[0]);
+          else selectorEmpleadoPago(conP);
+        });
         Array.prototype.forEach.call(el('s-lista').querySelectorAll('[data-pagar]'), function (b) {
-          b.addEventListener('click', async function () {
-            var s = lista[num(b.getAttribute('data-pagar'))];
-            try { await API.cambiarEstadoSueldo(s.id, 'pagado'); toast('Sueldo marcado como pagado', 'ok'); cargar(); }
-            catch (e) { toast(e.message, 'error'); }
+          b.addEventListener('click', function () {
+            var id = b.getAttribute('data-pagar');
+            var e = emp.filter(function (x) { return String(x.id) === String(id); })[0];
+            formularioPagoSueldo(e);
           });
         });
+        if (el('s-trig')) el('s-trig').addEventListener('click', instalarTriggersNominaUI);
+        if (el('s-rec')) el('s-rec').addEventListener('click', async function () {
+          try { var r = await API.corridaNominaManual(); toast('Corrida hecha: ' + ((r && r.creadas) || 0) + ' día(s) nuevos', 'ok'); cargar(); }
+          catch (er) { toast(er.message, 'error'); }
+        });
       }
+      pintarEstadoTriggers();
     };
-    await datosRapidos('sueldos:' + p, 20000, function () { return API.listarSueldos({ periodo: p }); }, aplicar);
+    await datosRapidos('nomina', 10000, function () { return API.getNomina(); }, aplicar);
   }
   await cargar();
 }
 
-function formularioSueldo() {
-  API.listarEmpleados().then(function (emps) {
-    var activos = (emps || []).filter(function (e) { return String(e.activo) === '1'; });
+// Modal de pago: lista los días pendientes con casilla (marcado = se paga).
+// Los días que se desmarcan quedan como "no trabajó" (no se cobran).
+function formularioPagoSueldo(emp) {
+  if (!emp) return;
+  API.diasPendientes(emp.id).then(function (lista) {
+    lista = (lista || []).slice();
+    if (!lista.length) { toast('Ese empleado no tiene días pendientes', 'error'); return; }
+    var total = lista.reduce(function (a, x) { return a + num(x.monto_usd); }, 0);
+    var filas = lista.map(function (d) {
+      var etq = d.fecha_dia ? etiquetaFechaCorta(d.fecha_dia) : ('Periodo ' + (d.periodo || '') + ' (registro anterior)');
+      return '<label style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid #eee">' +
+        '<span style="display:flex;align-items:center;gap:8px"><input type="checkbox" class="pg-dia" value="' + esc(d.id) + '" data-monto="' + num(d.monto_usd) + '" checked style="width:auto"> ' + esc(etq) + '</span>' +
+        '<b>' + fmtUSD(d.monto_usd) + '</b></label>';
+    }).join('');
     abrirModal(
-      '<div class="modal-tope"><h3>Registrar sueldo</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
-      '<label class="campo">Empleado</label><select id="su-emp">' +
-      activos.map(function (e) { return '<option value="' + esc(e.id) + '" data-sal="' + esc(e.salario_usd) + '">' + esc(e.nombre) + '</option>'; }).join('') +
-      '</select>' +
-      '<div class="form-2col">' +
-      '<div><label class="campo">Periodo</label><input type="month" id="su-periodo" value="' + hoyLocal().slice(0, 7) + '"></div>' +
-      '<div><label class="campo">Monto ($)</label><input id="su-monto" type="number" step="0.01" min="0.01"></div>' +
-      '</div>' +
-      '<label class="campo"><input type="checkbox" id="su-pagado" style="width:auto" checked> Marcar como pagado hoy</label>' +
+      '<div class="modal-tope"><h3>Pagar sueldo · ' + esc(emp.nombre) + '</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+      '<p class="muted" style="margin:4px 0 8px">Desmarca los días que <b>no trabajó</b>: esos no se cobran.</p>' +
+      '<div style="max-height:46vh;overflow:auto;border:1px solid #eee;border-radius:10px">' + filas + '</div>' +
+      '<div class="fila-entre" style="margin-top:10px"><strong>Total a pagar</strong><strong id="pg-total" class="k-verde">' + fmtUSD(total) + '</strong></div>' +
       '<div class="modal-acciones"><button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
-      '<button class="btn btn-primario" id="su-guardar">Guardar</button></div>'
+      '<button class="btn btn-primario" id="pg-guardar">Registrar pago</button></div>'
     );
-    el('su-emp').addEventListener('change', function () {
-      var opt = el('su-emp').selectedOptions[0];
-      if (opt) el('su-monto').value = opt.getAttribute('data-sal');
+    function recalcular() {
+      var t = 0;
+      Array.prototype.forEach.call(document.querySelectorAll('.pg-dia'), function (c) { if (c.checked) t += num(c.getAttribute('data-monto')); });
+      el('pg-total').textContent = fmtUSD(t);
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.pg-dia'), function (c) { c.addEventListener('change', recalcular); });
+    el('pg-guardar').addEventListener('click', async function () {
+      var pagar = [], falta = [];
+      Array.prototype.forEach.call(document.querySelectorAll('.pg-dia'), function (c) { (c.checked ? pagar : falta).push(c.value); });
+      if (!pagar.length && !falta.length) { toast('No hay días seleccionados', 'error'); return; }
+      try {
+        var r = await API.registrarPagoSueldo({ empleado_id: emp.id, pagar: pagar, falta: falta });
+        cerrarModal();
+        toast('Pago registrado: ' + fmtUSD((r && r.total_usd) || 0) + (falta.length ? ' · ' + falta.length + ' día(s) no trabajado(s)' : ''), 'ok');
+        irA('nomina', { sub: 'sueldos' });
+      } catch (err) { toast(err.message, 'error'); }
     });
-    el('su-emp').dispatchEvent(new Event('change'));
-    el('su-guardar').addEventListener('click', async function () {
-      var pagado = el('su-pagado').checked;
-      var s = {
-        empleado_id: el('su-emp').value,
-        periodo: el('su-periodo').value,
-        monto_usd: num(el('su-monto').value),
-        fecha_pago: pagado ? hoyLocal() : '',
-        estado: pagado ? 'pagado' : 'pendiente'
-      };
-      try { await API.registrarSueldo(s); cerrarModal(); toast('Sueldo registrado', 'ok'); irA('nomina', { sub: 'sueldos' }); }
-      catch (e) { toast(e.message, 'error'); }
+  }).catch(function (e) { toast(e.message, 'error'); });
+}
+
+function selectorEmpleadoPago(lista) {
+  abrirModal(
+    '<div class="modal-tope"><h3>¿A quién le pagas?</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px">' +
+    lista.map(function (e) {
+      return '<button class="btn btn-ancho" data-el="' + esc(e.id) + '">' + esc(e.nombre) + ' · ' + e.pend_dias + ' días · ' + fmtUSD(e.pend_usd) + '</button>';
+    }).join('') + '</div>'
+  );
+  Array.prototype.forEach.call(document.querySelectorAll('[data-el]'), function (b) {
+    b.addEventListener('click', function () {
+      var e = lista.filter(function (x) { return String(x.id) === String(b.getAttribute('data-el')); })[0];
+      cerrarModal();
+      formularioPagoSueldo(e);
     });
   });
+}
+
+function pintarEstadoTriggers() {
+  var box = el('s-trig-estado');
+  if (!box) return;
+  API.estadoTriggersNomina().then(function (r) {
+    box.textContent = (r && r.total >= 2)
+      ? '✅ Activa: se calcula sola a las 8:00 y 16:00'
+      : '⚠️ Sin activar. Usa «Activar / reparar» (o se calcula al abrir la app).';
+  }).catch(function () {
+    box.textContent = '⚠️ Sin activar. Usa «Activar / reparar» (o se calcula al abrir la app).';
+  });
+}
+
+function instalarTriggersNominaUI() {
+  API.instalarTriggersNomina().then(function () {
+    toast('Avisos automáticos activados (8:00 y 16:00)', 'ok');
+    pintarEstadoTriggers();
+  }).catch(function (e) { toast(e.message, 'error'); });
+}
+
+function etiquetaFechaCorta(f) {
+  var p = String(f || '').slice(0, 10).split('-');
+  if (p.length !== 3) return String(f || '');
+  var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+  var dow = d.getDay();
+  return DIAS_CORTOS[dow === 0 ? 7 : dow] + ' ' + ('0' + d.getDate()).slice(-2) + '/' + p[1];
+}
+
+function diasSemanaTexto(v) {
+  var a = String(v == null ? '' : v).split(',').map(function (x) { return parseInt(x, 10); })
+    .filter(function (n) { return n >= 1 && n <= 7; });
+  if (!a.length) return '—';
+  return a.map(function (n) { return DIAS_CORTOS[n]; }).join(' · ');
 }
 
 /* ============================================================
