@@ -4082,7 +4082,7 @@ function formularioPedido() {
       '<span class="pago-lbl" id="pedc-div-lbl">💵 Divisas</span>' +
     '</div>' +
     '<div id="pedc-ref-caja">' +
-      '<label class="campo">Referencia del Pago Móvil (opcional)</label>' +
+      '<label class="campo">Referencia del Pago Móvil *</label>' +
       '<input id="pedc-ref" inputmode="numeric" placeholder="ej: 123456789" autocomplete="off">' +
     '</div>' +
     '<label class="campo">Agregar productos</label>' +
@@ -4171,6 +4171,7 @@ function formularioPedido() {
     var err = el('pedc-error'); err.style.display = 'none';
     var nom = (el('pedc-nom').value || '').trim();
     if (!nom) { err.textContent = 'Escribe el nombre del cliente.'; err.style.display = 'block'; return; }
+    if (_pedPago === 'pago_movil' && !(el('pedc-ref').value || '').trim()) { err.textContent = 'Escribe la referencia del Pago Móvil (o cambia a Divisas).'; err.style.display = 'block'; return; }
     if (!_pedCarrito.length) { err.textContent = 'Agrega al menos un producto.'; err.style.display = 'block'; return; }
     var btn = despachar ? el('pedc-go-desp') : el('pedc-go');
     var otro = despachar ? el('pedc-go') : el('pedc-go-desp');
