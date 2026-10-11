@@ -121,8 +121,8 @@
   /* URL del backend (misma app de FresaChoco). */
   var URL_API = 'https://script.google.com/macros/s/AKfycby3_MRc7Qczo7ephGu_TMThWyjpzcffA11Nywn2Ioet513FocrxIalvN1j-9FE1MqBPxw/exec';
 
-  var MENU = { tasa: 0, productos: [] };
-  var CARRITO = {};   // codigo -> { producto, cantidad }
+  var MENU = { tasa: 0, productos: [], abierto: true, mensaje_cerrado: '', toppings: [] };
+  var CARRITO = [];   // [{ codigo, nombre, precio_usd, cantidad, topes:[cod] }]
   var CAT = '';
   var MODO = 'llevar';       // 'llevar' | 'comer'
   var PAGO = 'pago_movil';   // 'pago_movil' | 'divisas'
@@ -154,6 +154,89 @@
     return v;
   }
 
+  /* ---------- Topes/toppings y disponibilidad ---------- */
+  function toppingPorCod(cod){ return MENU.toppings.filter(function(t){ return String(t.codigo)===String(cod); })[0] || null; }
+  function precioTopping(cod){ var t = toppingPorCod(cod); return (t && String(t.tipo)!=='incluido') ? num(t.precio_usd) : 0; }
+  function extrasUnit(topes){ return (topes||[]).reduce(function(s,c){ return s+precioTopping(c); }, 0); }
+  function nombresTopes(topes){
+    return (topes||[]).map(function(c){ var t=toppingPorCod(c); return t ? t.nombre : c; }).join(', ');
+  }
+  function lineaKey(cod, topes){ return String(cod)+'|'+(topes||[]).slice().sort().join(','); }
+  function productoDe(cod){ return MENU.productos.filter(function(x){ return String(x.codigo)===String(cod); })[0] || null; }
+  function enCarro(cod){ return CARRITO.reduce(function(s,l){ return s+(String(l.codigo)===String(cod)?l.cantidad:0); }, 0); }
+  function restante(p){ if(!p || p.unidades==null) return Infinity; return Math.max(0, num(p.unidades) - enCarro(p.codigo)); }
+
+  function pintarCerrado(){
+    el('chips').hidden = true;
+    el('barra').hidden = true;
+    el('grid').innerHTML =
+      '<div class="cargando" style="padding:44px 18px">'+
+        '<div style="font-size:52px;line-height:1">🍓</div>'+
+        '<h2 style="margin:10px 0 6px;color:var(--prim)">Fuera del horario de atención</h2>'+
+        '<p style="max-width:340px;margin:0 auto;color:var(--texto-suave)">'+esc(MENU.mensaje_cerrado || 'Actualmente estamos fuera del horario de atención. ¡Vuelve pronto!')+'</p>'+
+        '<div style="margin-top:18px"><button class="btn-prim" onclick="location.reload()">Actualizar</button></div>'+
+      '</div>';
+  }
+
+  /* ---------- Selector de topes ---------- */
+  function elegirTopes(p, iniciales, onOk){
+    var inc = MENU.toppings.filter(function(t){ return String(t.tipo)==='incluido'; });
+    var add = MENU.toppings.filter(function(t){ return String(t.tipo)!=='incluido'; });
+    if(!inc.length && !add.length){ onOk([]); return; }
+    var maxInc = num(p.topes_incluidos);
+    var sel = (iniciales||[]).slice();
+    function cuentaInc(){ return sel.filter(function(c){ var t=toppingPorCod(c); return t && String(t.tipo)==='incluido'; }).length; }
+    function casilla(t, esInc){
+      var mark = sel.indexOf(String(t.codigo)) >= 0;
+      return '<label class="rl" style="cursor:pointer;align-items:center;gap:8px">'+
+        '<input type="checkbox" data-tp="'+esc(t.codigo)+'" '+(mark?'checked':'')+'>'+
+        '<span>'+esc(t.nombre)+(esInc?' <span style="color:var(--ok)">incluido</span>':' <b>+ '+fmtUSD(t.precio_usd)+'</b>')+'</span></label>';
+    }
+    el('modal').innerHTML =
+      '<div class="hoja">'+
+        '<h3>🍫 Topes para «'+esc(p.nombre)+'»</h3>'+
+        (inc.length ? '<p style="margin:4px 0;color:var(--texto-suave);font-size:13px">Elige hasta <b>'+maxInc+'</b> clásico(s) incluido(s) sin costo.</p>'+
+          '<div class="resumen">'+inc.map(function(t){ return casilla(t,true); }).join('')+'</div>' : '')+
+        (add.length ? '<p style="margin:10px 0 4px;color:var(--texto-suave);font-size:13px">Adicionales (+ precio por unidad):</p>'+
+          '<div class="resumen">'+add.map(function(t){ return casilla(t,false); }).join('')+'</div>' : '')+
+        '<div class="err" id="tp-err"></div>'+
+        '<div class="acc"><button class="btn-suave" id="tp-cancel">Cancelar</button>'+
+        '<button class="btn-prim" id="tp-ok">Agregar al pedido</button></div>'+
+      '</div>';
+    el('modal').hidden = false;
+    Array.prototype.forEach.call(el('modal').querySelectorAll('[data-tp]'), function(cb){
+      cb.addEventListener('change', function(){
+        var cod = cb.getAttribute('data-tp');
+        if(cb.checked){ if(sel.indexOf(cod)<0) sel.push(cod); }
+        else sel = sel.filter(function(x){ return x!==cod; });
+        var e2 = el('tp-err');
+        if(maxInc && cuentaInc() > maxInc){ e2.textContent = 'Solo puedes elegir '+maxInc+' clásico(s).'; e2.style.display='block'; }
+        else e2.style.display='none';
+      });
+    });
+    el('tp-cancel').addEventListener('click', cerrarModal);
+    el('tp-ok').addEventListener('click', function(){
+      if(maxInc && cuentaInc() > maxInc){ var e2=el('tp-err'); e2.textContent='Solo puedes elegir '+maxInc+' clásico(s).'; e2.style.display='block'; return; }
+      cerrarModal();
+      onOk(sel);
+    });
+  }
+
+  function agregarLinea(p, topes){
+    if(restante(p) <= 0){ alert('No hay más unidades disponibles de «'+p.nombre+'».'); return; }
+    var key = lineaKey(p.codigo, topes);
+    var l = CARRITO.filter(function(x){ return x.key===key; })[0];
+    if(l) l.cantidad += 1;
+    else CARRITO.push({ key:key, codigo:p.codigo, nombre:p.nombre, precio_usd:num(p.precio_usd), cantidad:1, topes:(topes||[]).slice() });
+    pintarGrid(CAT); pintarBarra();
+  }
+
+  function agregarTopeProducto(p){
+    var tiene = MENU.toppings.length && (num(p.topes_incluidos) > 0 || MENU.toppings.some(function(t){ return String(t.tipo)!=='incluido'; }));
+    if(tiene){ elegirTopes(p, [], function(sel){ agregarLinea(p, sel); }); }
+    else agregarLinea(p, []);
+  }
+
   function cargar(){
     return fetch(URL_API+'?accion=getMenuPublico&_='+Date.now())
       .then(function(r){ return r.json(); })
@@ -161,6 +244,10 @@
         var v = parseResp(o);
         MENU.tasa = num(v.tasa);
         MENU.productos = Array.isArray(v.productos) ? v.productos : [];
+        MENU.abierto = (v.abierto !== false);
+        MENU.mensaje_cerrado = v.mensaje_cerrado || '';
+        MENU.toppings = Array.isArray(v.toppings) ? v.toppings : [];
+        if(!MENU.abierto){ pintarCerrado(); return; }
         pintarChips();
         pintarGrid('');
       })
@@ -203,8 +290,10 @@
     if(!lista.length){ grid.innerHTML = '<div class="cargando">Todavía no hay productos en el menú.</div>'; return; }
     grid.innerHTML = lista.map(function(p){
       var cod = String(p.codigo);
-      var cant = CARRITO[cod] ? CARRITO[cod].cantidad : 0;
-      var agotado = p.disponible === false;
+      var cant = enCarro(cod);
+      var agotado = (p.disponible === false) || (restante(p) <= 0 && cant === 0);
+      var quedan = (p.unidades != null && p.unidades > 0)
+        ? '<div class="usd" style="color:var(--texto-suave)">quedan '+num(p.unidades)+'</div>' : '';
       var foto = p.imagen
         ? '<img src="'+esc(p.imagen)+'" alt="'+esc(p.nombre)+'" loading="lazy">'
         : '<div class="sin">'+emoji(p)+'</div>';
@@ -218,34 +307,39 @@
         '<div class="cuerpo">'+
           '<div class="nom">'+esc(p.nombre)+'</div>'+
           '<div class="desc">'+(p.descripcion?esc(p.descripcion):'')+'</div>'+
+          (num(p.topes_incluidos) > 0 ? '<div class="usd" style="color:var(--prim)">🎁 '+num(p.topes_incluidos)+' tope(s) clásico(s) incluido(s)</div>' : '')+
           '<div class="pie">'+
-            '<div><div class="precio">'+fmtVES(num(p.precio_usd)*MENU.tasa)+'</div><div class="usd">'+fmtUSD(p.precio_usd)+'</div></div>'+
+            '<div><div class="precio">'+fmtVES(num(p.precio_usd)*MENU.tasa)+'</div><div class="usd">'+fmtUSD(p.precio_usd)+'</div>'+quedan+'</div>'+
             acc+
           '</div>'+
         '</div>'+
       '</div>';
     }).join('');
     Array.prototype.forEach.call(grid.querySelectorAll('[data-mas]'), function(b){
-      b.addEventListener('click', function(){ agregar(b.getAttribute('data-mas'), 1); });
+      b.addEventListener('click', function(){
+        var p = productoDe(b.getAttribute('data-mas'));
+        if(p) agregarTopeProducto(p);
+      });
     });
     Array.prototype.forEach.call(grid.querySelectorAll('[data-menos]'), function(b){
-      b.addEventListener('click', function(){ agregar(b.getAttribute('data-menos'), -1); });
+      b.addEventListener('click', function(){ quitarUno(b.getAttribute('data-menos')); });
     });
   }
 
-  function agregar(cod, d){
-    var p = MENU.productos.filter(function(x){ return String(x.codigo)===cod; })[0];
-    if(!p || p.disponible === false) return;
-    if(!CARRITO[cod]) CARRITO[cod] = { producto: p, cantidad: 0 };
-    CARRITO[cod].cantidad += d;
-    if(CARRITO[cod].cantidad <= 0) delete CARRITO[cod];
-    pintarGrid(CAT);
-    pintarBarra();
+  function quitarUno(cod){
+    for(var i = CARRITO.length - 1; i >= 0; i--){
+      if(String(CARRITO[i].codigo) === String(cod)){
+        CARRITO[i].cantidad -= 1;
+        if(CARRITO[i].cantidad <= 0) CARRITO.splice(i,1);
+        break;
+      }
+    }
+    pintarGrid(CAT); pintarBarra();
   }
 
   function totales(){
     var cant = 0, usd = 0;
-    Object.keys(CARRITO).forEach(function(k){ cant += CARRITO[k].cantidad; usd += CARRITO[k].cantidad * num(CARRITO[k].producto.precio_usd); });
+    CARRITO.forEach(function(l){ cant += l.cantidad; usd += l.cantidad * (num(l.precio_usd) + extrasUnit(l.topes)); });
     return { cant: cant, usd: usd };
   }
 
@@ -264,9 +358,9 @@
   function abrirCheckout(){
     var t = totales();
     if(!t.cant){ return; }
-    var lineas = Object.keys(CARRITO).map(function(k){
-      var l = CARRITO[k];
-      return '<div class="rl"><span>'+l.cantidad+'× '+esc(l.producto.nombre)+'</span><span class="mono">'+fmtUSD(l.cantidad*num(l.producto.precio_usd))+'</span></div>';
+    var lineas = CARRITO.map(function(l){
+      var topesTxt = l.topes && l.topes.length ? ' <span style="color:var(--texto-suave);font-size:12px">🍫 '+esc(nombresTopes(l.topes))+'</span>' : '';
+      return '<div class="rl"><span>'+l.cantidad+'× '+esc(l.nombre)+topesTxt+'</span><span class="mono">'+fmtUSD(l.cantidad*(num(l.precio_usd)+extrasUnit(l.topes)))+'</span></div>';
     }).join('');
     el('modal').innerHTML =
       '<div class="hoja">'+
@@ -329,7 +423,7 @@
     var nom = (el('c-nom').value||'').trim();
     if(!nom){ err.textContent='Escribe tu nombre.'; err.style.display='block'; return; }
     if(PAGO === 'pago_movil' && !(el('c-ref').value||'').trim()){ err.textContent='Escribe la referencia de tu Pago Móvil (o cambia a Divisas).'; err.style.display='block'; return; }
-    var items = Object.keys(CARRITO).map(function(k){ return { codigo:k, cantidad:CARRITO[k].cantidad }; });
+    var items = CARRITO.map(function(l){ return { codigo:l.codigo, cantidad:l.cantidad, topes:l.topes || [] }; });
     if(!items.length){ err.textContent='Tu pedido está vacío.'; err.style.display='block'; return; }
     var btn = el('c-ok'); btn.disabled = true; btn.textContent = 'Enviando…';
     try{
@@ -339,7 +433,7 @@
       var r = await fetch(URL_API+'?accion=crearPedidoPublico&args='+encodeURIComponent(JSON.stringify([datos])));
       var o = await r.json();
       var v = parseResp(o);
-      CARRITO = {};
+      CARRITO = [];
       pintarBarra();
       pintarGrid(CAT);
       mostrarConfirmacion(v.pedido);
