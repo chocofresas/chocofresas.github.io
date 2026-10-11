@@ -2066,6 +2066,8 @@ render.inicio = async function () {
         ventasHoy: { cantidad: 0, usd: 0, ves: 0 },
         ventasMes: { cantidad: 0, usd: 0, ves: 0 },
         gastosMes: { cantidad: 0, usd: 0 },
+        egresosMes: { cantidad: 0, usd: 0 },
+        sueldosPagadosMes: { cantidad: 0, usd: 0 },
         sueldosPendientes: 0,
         stockBajo: [],
         totalProductos: 0
@@ -2102,6 +2104,7 @@ render.inicio = async function () {
       kpi('💵 Ventas de hoy', fmtUSD(d.ventasHoy.usd), fmtVES(d.ventasHoy.ves), d.ventasHoy.cantidad + ' pedidos', 'k-verde', 'pedidos') +
       kpi('📈 Ventas del mes', fmtUSD(d.ventasMes.usd), fmtVES(d.ventasMes.ves), d.ventasMes.cantidad + ' pedidos', 'k-azul', 'reportes') +
       kpi('💸 Gastos del mes', fmtUSD(d.gastosMes.usd), fmtVES(d.gastosMes.usd * (S.tasa || 0)), d.gastosMes.cantidad + ' registros', 'k-rojo', 'gastos') +
+      kpi('💸 Egresos del mes', fmtUSD(d.egresosMes.usd), fmtVES(d.egresosMes.usd * (S.tasa || 0)), d.egresosMes.cantidad + ' pagos (gastos + sueldos + obras)', 'k-rojo', 'reportes') +
       kpi('💰 Sueldos pendientes', String(d.sueldosPendientes), 'de este mes', '', 'k-naranja', 'nomina') +
       kpi('📖 Productos del menú', String(d.totalProductos), 'activos', '', 'k-azul', 'menu') +
       kpi('📦 Insumos', String(d.totalInsumos || 0), 'materia prima', (d.stockBajo && d.stockBajo.length) + ' bajo el mínimo', 'k-naranja', 'insumos') +
@@ -3383,7 +3386,7 @@ async function renderSubSueldos() {
           (S.rol === 'admin' ? '<th></th>' : '') + '</tr></thead><tbody>' +
           lista.map(function (s, i) {
             return '<tr><td class="negrita">' + esc(s.empleado_nombre) + '</td>' +
-              '<td>' + esc(s.periodo) + '</td>' +
+              '<td>' + esc(String(s.periodo || '').slice(0, 7)) + '</td>' +
               '<td class="der">' + fmtUSD(s.monto_usd) + '</td>' +
               '<td class="der muted">' + fmtVES(s.monto_usd * (S.tasa || 0)) + '</td>' +
               '<td>' + (s.fecha_pago ? fechaCorta(s.fecha_pago) : '—') + '</td>' +
