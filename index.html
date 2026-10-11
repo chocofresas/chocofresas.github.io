@@ -626,7 +626,7 @@
       <div class="logo">🍓</div>
       <div class="login-emojis">🍓🍫🍦🍬🍯🥜</div>
       <h1>Fresa<em>Choco</em></h1>
-      <p class="sub">Pedidos · Menú · Insumos · <span class="ver-app">V2.0</span></p>
+      <p class="sub">Pedidos · Menú · Insumos · <span class="ver-app">V2.1</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -661,7 +661,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">FresaChoco · <span class="ver-app">V2.0</span></div>
+        <div class="gaveta-vers">FresaChoco · <span class="ver-app">V2.1</span></div>
       </div>
     </aside>
 
@@ -702,6 +702,8 @@ var S = {
   pagina: 'inicio',
   cacheProds: [],
   cacheInsumos: [],
+  cacheToppings: [],
+  menuAbierto: true,
   errProds: '',
   categoriasExtra: []
 };
@@ -764,6 +766,8 @@ function pintar(html) { var c = el('contenido'); if (c) c.innerHTML = html; }
 function prods() { return Array.isArray(S.cacheProds) ? S.cacheProds : []; }
 // Igual para los insumos (materia prima).
 function insumos() { return Array.isArray(S.cacheInsumos) ? S.cacheInsumos : []; }
+// Igual para los topes/toppings del menú.
+function toppings() { return Array.isArray(S.cacheToppings) ? S.cacheToppings : []; }
 // Receta de un producto normalizada a [{insumo, cantidad}].
 function recetaDe(p) {
   var r = p && p.receta;
@@ -789,6 +793,33 @@ function emojiDeProducto(p) {
   if (n.indexOf('gallet') >= 0 || n.indexOf('wafer') >= 0) return '🍪';
   if (n.indexOf('malteada') >= 0 || n.indexOf('cafe') >= 0 || n.indexOf('te ') >= 0) return '🥤';
   return '🍫';
+}
+
+/* ---------- TOPPINGS / TOPES ----------
+   "Incluido" = tope clásico gratis (hasta el cupo que el producto defina).
+   "Adicional" = suma su precio a cada unidad. */
+function topesDisponibles(p) {
+  var inc = toppings().filter(function (t) { return String(t.tipo) === 'incluido' && String(t.activo) !== '0'; });
+  var add = toppings().filter(function (t) { return String(t.tipo) !== 'incluido' && String(t.activo) !== '0'; });
+  return { max: num(p && p.topes_incluidos), incluidos: inc, adicionales: add };
+}
+function toppingPorCodigo(cod) {
+  return toppings().filter(function (t) { return String(t.codigo) === String(cod); })[0] || null;
+}
+function precioTopping(cod) {
+  var t = toppingPorCodigo(cod);
+  return (t && String(t.tipo) !== 'incluido') ? num(t.precio_usd) : 0;
+}
+function totalExtrasToppings(codes) {
+  var s = 0;
+  (codes || []).forEach(function (c) { s += precioTopping(c); });
+  return s;
+}
+function nombresToppings(codes) {
+  return (codes || []).map(function (c) {
+    var t = toppingPorCodigo(c);
+    return t ? String(t.nombre) : String(c);
+  }).join(', ');
 }
 
 /* ---------- CATEGORÍAS ----------
@@ -869,6 +900,20 @@ function cargarInsumos() {
     return S.cacheInsumos;
   });
   return _promIns;
+}
+var _promTop = null;
+function cargarToppings() {
+  if (_promTop) return _promTop;
+  _promTop = API.listarToppings().then(function (r) {
+    if (Array.isArray(r)) { S.cacheToppings = r; }
+    else { S.cacheToppings = []; }
+    return S.cacheToppings;
+  }).catch(function (e) {
+    if (!Array.isArray(S.cacheToppings)) S.cacheToppings = [];
+    _promTop = null;
+    return S.cacheToppings;
+  });
+  return _promTop;
 }
 /* ---------- Mini-caché local (acelera el cambio de pestañas) ----------
    Guarda copias de lo último que pidió cada pantalla y las reutiliza para
@@ -1132,7 +1177,14 @@ var API = {
   listarInsumos: function () { return apiLlamada('listarInsumos', [S.tok]); },
   guardarInsumo: function (i) { return apiGrabar('guardarInsumo', [S.tok, i], ['insumos', 'dashboard']); },
   ajustarStockInsumo: function (c, q, m) { return apiGrabar('ajustarStockInsumo', [S.tok, c, q, m], ['insumos', 'dashboard']); },
-  eliminarInsumo: function (c) { return apiGrabar('eliminarInsumo', [S.tok, c], ['insumos', 'dashboard']); }
+  eliminarInsumo: function (c) { return apiGrabar('eliminarInsumo', [S.tok, c], ['insumos', 'dashboard']); },
+  // --- Topes/toppings del menú ---
+  listarToppings: function () { return apiLlamada('listarToppings', [S.tok]); },
+  guardarTopping: function (t) { return apiGrabar('guardarTopping', [S.tok, t], ['toppings']); },
+  eliminarTopping: function (c) { return apiGrabar('eliminarTopping', [S.tok, c], ['toppings']); },
+  // --- Estado del menú (abierto/cerrado) ---
+  cambiarMenuAbierto: function (abierto) { return apiGrabar('cambiarMenuAbierto', [S.tok, abierto], ['dashboard']); },
+  getDisponibilidad: function () { return apiLlamada('getDisponibilidad', [S.tok]); }
 };
 
 // Las escrituras borran la caché local de lo que cambian, para que la siguiente
@@ -1142,6 +1194,7 @@ function apiGrabar(fn, args, claves) {
     invalidarCache.apply(null, claves);
     if (claves.indexOf('productos') >= 0) _promProd = null; // el inventario cambió: recargar
     if (claves.indexOf('insumos') >= 0) _promIns = null;     // los insumos cambiaron: recargar
+    if (claves.indexOf('toppings') >= 0) _promTop = null;    // los topes cambiaron: recargar
     return r;
   });
 }
@@ -1819,6 +1872,7 @@ var METODOS = [
   ['otro', 'Otro']
 ];
 var CATEGORIAS = [
+  'Vasos',
   'Fresas con Chocolate',
   'Fresas con Crema',
   'Chispas de Colores',
@@ -1969,8 +2023,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'V2.0' && window.__avisar) {
-        window.__avisar('La página es V2.0, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir V2.0).', true);
+      if (sv && sv.version && sv.version !== 'V2.1' && window.__avisar) {
+        window.__avisar('La página es V2.1, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir V2.1).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -2008,6 +2062,7 @@ render.inicio = async function () {
     if (!d || typeof d !== 'object') {
       d = {
         tasa: { tasa: S.tasa || 0, fecha: S.fechaTasa || '', fuente: S.fuenteTasa || '' },
+        menuAbierto: true,
         ventasHoy: { cantidad: 0, usd: 0, ves: 0 },
         ventasMes: { cantidad: 0, usd: 0, ves: 0 },
         gastosMes: { cantidad: 0, usd: 0 },
@@ -2016,6 +2071,7 @@ render.inicio = async function () {
         totalProductos: 0
       };
     }
+    if (typeof d.menuAbierto === 'undefined') d.menuAbierto = true;
     if (S.tasa === null && d.tasa && num(d.tasa.tasa)) {
       S.tasa = num(d.tasa.tasa);
       S.tasaManual = !!d.tasa.manual;
@@ -2032,6 +2088,16 @@ render.inicio = async function () {
       '<div><strong>💱 Tasa vigente</strong><br><span class="muted">' + esc(d.tasa && d.tasa.fecha) + ' · ' + esc(d.tasa && d.tasa.fuente) + (d.tasa && d.tasa.manual ? ' · manual' : '') + '</span></div>' +
       '<div class="k-azul" style="font-size:19px;font-weight:800">Bs ' + fmtNum(num(d.tasa && d.tasa.tasa)) + ' / $</div>' +
       '</div></div>' +
+      '<div class="tarjeta"><div class="fila-entre">' +
+      '<div><strong>📖 Menú de clientes</strong><br><span class="muted">' +
+        (d.menuAbierto
+          ? 'Abierto: los clientes pueden pedir desde el QR.'
+          : 'Cerrado: se muestra «fuera del horario de atención» y no se aceptan pedidos.') +
+      '</span></div>' +
+      (S.rol === 'admin'
+        ? '<label class="switch"><input type="checkbox" id="inicio-menu-sw"' + (d.menuAbierto ? ' checked' : '') + '><span class="sw"></span></label>'
+        : '<span style="font-weight:800;color:' + (d.menuAbierto ? '#16a34a' : '#dc2626') + '">' + (d.menuAbierto ? '🟢 Abierto' : '🔴 Cerrado') + '</span>') +
+      '</div></div>' +
       '<div class="grid-cards" style="margin-top:14px">' +
       kpi('💵 Ventas de hoy', fmtUSD(d.ventasHoy.usd), fmtVES(d.ventasHoy.ves), d.ventasHoy.cantidad + ' pedidos', 'k-verde', 'pedidos') +
       kpi('📈 Ventas del mes', fmtUSD(d.ventasMes.usd), fmtVES(d.ventasMes.ves), d.ventasMes.cantidad + ' pedidos', 'k-azul', 'reportes') +
@@ -2046,6 +2112,17 @@ render.inicio = async function () {
         }).join('') +
         '</div><div class="fila-botones"><button class="btn" data-ir="insumos">Ir a insumos</button></div></div>' : '')
     );
+    var sw = el('inicio-menu-sw');
+    if (sw) sw.addEventListener('change', function () {
+      var abierto = sw.checked;
+      API.cambiarMenuAbierto(abierto).then(function () {
+        S.menuAbierto = abierto;
+        toast(abierto ? 'Menú abierto: los clientes ya pueden pedir 🟢' : 'Menú cerrado 🔴', 'ok');
+      }).catch(function (e) {
+        sw.checked = !abierto;
+        toast((e && e.message) || 'No se pudo cambiar el menú', 'error');
+      });
+    });
     Array.prototype.forEach.call(document.querySelectorAll('#contenido [data-ir]'), function (btn) {
       btn.addEventListener('click', function () { irA(btn.getAttribute('data-ir')); });
     });
@@ -2600,6 +2677,11 @@ function formularioProducto(prod) {
     '<label class="campo" style="margin-top:10px">🔧 Receta — insumos que consume (por cada unidad vendida)</label>' +
     '<div id="f-receta"></div>' +
     '<button class="btn btn-suave" id="f-rec-add" type="button" style="margin-top:6px">＋ Agregar insumo</button>' +
+    '<div class="form-2col" style="margin-top:10px">' +
+    '<div><label class="campo">🎁 Topes clásicos incluidos</label><input id="f-topes" type="number" min="0" step="1" value="' + num(p.topes_incluidos) + '"></div>' +
+    '<div><label class="campo">🧮 Cupo manual (vacío = sin límite)</label><input id="f-disp" type="number" min="0" step="1" value="' + (p.disponibles === '' || p.disponibles == null ? '' : num(p.disponibles)) + '"></div>' +
+    '</div>' +
+    '<p class="muted" style="font-size:12px;margin:2px 0 0">Los <b>topes clásicos</b> van gratis (el cliente elige cuáles). El <b>cupo</b> limita cuántas unidades se pueden pedir hoy; si lo dejas vacío, el límite lo pone la receta y el stock de insumos.</p>' +
     '<label class="campo"><input type="checkbox" id="f-menu" style="width:auto"' + (enMenu ? ' checked' : '') + '> Mostrar en el menú público (QR)</label>' +
     '<label class="campo"><input type="checkbox" id="f-activo" style="width:auto"' + (String(p.activo) !== '0' ? ' checked' : '') + '> Activo</label>' +
     '<div id="f-error" class="aviso aviso-error" style="display:none;margin-top:10px"></div>' +
@@ -2717,6 +2799,8 @@ function formularioProducto(prod) {
         costo_usd: num(el('f-costo').value),
         descripcion: el('f-desc').value.trim(),
         receta: receta.filter(function (x) { return x.insumo && num(x.cantidad) > 0; }),
+        topes_incluidos: num(el('f-topes').value),
+        disponibles: el('f-disp').value === '' ? '' : num(el('f-disp').value),
         en_menu: el('f-menu').checked ? 1 : 0,
         activo: el('f-activo').checked ? 1 : 0
       };
@@ -2747,9 +2831,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir V2.0 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir V2.1 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir V2.0).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir V2.1).');
           });
         })();
       }
@@ -3671,6 +3755,7 @@ render.menu = async function () {
   if (S.rol !== 'admin') { pinError('Solo el administrador puede editar el menú.'); return; }
   if (!prods().length) await cargarProductos();
   if (!insumos().length) { try { await cargarInsumos(); } catch (e) {} }
+  if (!toppings().length) { try { await cargarToppings(); } catch (e) {} }
   pintar(
     '<div class="tarjeta qr-caja">' +
       '<h2>📖 Menú para tus clientes</h2>' +
@@ -3690,9 +3775,10 @@ render.menu = async function () {
     '</div>' +
     '<div class="fila-botones" style="margin:8px 0 4px">' +
       '<button class="btn btn-primario" id="mn-nuevo">＋ Nuevo producto</button>' +
+      '<button class="btn" id="mn-topes">🍫 Topes</button>' +
       '<button class="btn" id="mn-reload">↻ Recargar</button>' +
     '</div>' +
-    '<p class="muted" style="margin:0 0 8px;font-size:12.5px">Agrega, edita o elimina productos del menú. Para el <b>stock de materia prima</b>, usa la pestaña 📦 Insumos.</p>' +
+    '<p class="muted" style="margin:0 0 8px;font-size:12.5px">Agrega, edita o elimina productos del menú. Para el <b>stock de materia prima</b>, usa la pestaña 📦 Insumos. Los <b>topes</b> (clásicos gratis y adicionales) se administran con el botón 🍫 Topes.</p>' +
     '<div class="buscador"><input id="mn-bus" placeholder="Buscar producto…" autocomplete="off"></div>' +
     '<div id="mn-resumen" class="muted" style="margin:0 0 8px"></div>' +
     '<div id="mn-grid" class="menu-grid"></div>'
@@ -3702,8 +3788,10 @@ render.menu = async function () {
   el('mn-print').addEventListener('click', imprimirQRMenu);
   el('mn-bus').addEventListener('input', function () { pintarGridMenu(this.value); });
   el('mn-nuevo').addEventListener('click', function () { formularioProducto(null); });
+  el('mn-topes').addEventListener('click', modalToppings);
   el('mn-reload').addEventListener('click', async function () {
-    _promProd = null; await cargarProductos();
+    _promProd = null; _promTop = null;
+    await cargarProductos(); await cargarToppings();
     pintarGridMenu(el('mn-bus') ? el('mn-bus').value : '');
     toast('Menú recargado', 'ok');
   });
@@ -3729,7 +3817,10 @@ function pintarGridMenu(q) {
       '<div class="mc-foto">' + img + '</div>' +
       '<div class="mc-cuerpo">' +
         '<div class="mc-nom"><span class="prod-emoji">' + emojiDeProducto(p) + '</span>' + esc(p.nombre) + '</div>' +
-        '<div class="mc-cat muted">' + esc(p.categoria) + ' · ' + fmtUSD(p.precio_usd) + '</div>' +
+        '<div class="mc-cat muted">' + esc(p.categoria) + ' · ' + fmtUSD(p.precio_usd) +
+          (num(p.topes_incluidos) > 0 ? ' · +' + fmtCant(p.topes_incluidos) + ' tope(s)' : '') +
+          (p.disponibles !== '' && p.disponibles != null ? ' · cupo ' + fmtCant(p.disponibles) : '') +
+        '</div>' +
         '<div class="mc-desc muted">' + (p.descripcion ? esc(p.descripcion) : '<i>Sin detalles</i>') + '</div>' +
         '<div class="mc-acc">' +
           '<button class="btn btn-suave" data-mn-edit="' + esc(p.codigo) + '">✏️ Foto y detalles</button>' +
@@ -3774,6 +3865,145 @@ function pintarGridMenu(q) {
         toast('Producto eliminado 🗑', 'ok');
       } catch (e) { toast((e && e.message) || 'No se pudo eliminar', 'error'); b.disabled = false; }
     });
+  });
+}
+
+/* ---------- Administración de topes/toppings ---------- */
+function modalToppings() {
+  if (S.rol !== 'admin') { toast('Solo el administrador puede editar los topes.', 'error'); return; }
+  function fila(t) {
+    var esInc = String(t.tipo) === 'incluido';
+    return '<div class="d-lin" style="align-items:center">' +
+      '<span>' + (esInc ? '🎁 ' : '➕ ') + '<b>' + esc(t.nombre) + '</b><br><span class="muted mono">' + esc(t.codigo) + ' · ' + (esInc ? 'clásico (gratis)' : 'adicional ' + fmtUSD(t.precio_usd)) + '</span></span>' +
+      '<span style="white-space:nowrap">' +
+        '<button class="btn btn-suave" data-top-edit="' + esc(t.codigo) + '">✏️</button> ' +
+        '<button class="btn btn-suave" data-top-del="' + esc(t.codigo) + '" title="Eliminar">🗑</button>' +
+      '</span>' +
+    '</div>';
+  }
+  var lista = toppings();
+  var inc = lista.filter(function (t) { return String(t.tipo) === 'incluido'; });
+  var add = lista.filter(function (t) { return String(t.tipo) !== 'incluido'; });
+  abrirModal(
+    '<div class="modal-tope"><h3>🍫 Topes / toppings</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+    '<p class="muted" style="margin-top:0">Los <b>clásicos</b> van gratis dentro del cupo que cada vaso incluye. Los <b>adicionales</b> suman su precio a cada unidad.</p>' +
+    '<button class="btn btn-primario btn-ancho" id="top-nuevo">＋ Nuevo tope</button>' +
+    '<h4 style="margin:14px 0 4px">🎁 Clásicos incluidos</h4>' +
+    '<div class="detalle-venta">' + (inc.length ? inc.map(fila).join('') : '<div class="muted">Sin topes clásicos.</div>') + '</div>' +
+    '<h4 style="margin:14px 0 4px">➕ Adicionales (+ precio)</h4>' +
+    '<div class="detalle-venta">' + (add.length ? add.map(fila).join('') : '<div class="muted">Sin adicionales.</div>') + '</div>'
+  );
+  el('top-nuevo').addEventListener('click', function () { formularioTopping(null); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-top-edit]'), function (b) {
+    b.addEventListener('click', function () { formularioTopping(toppingPorCodigo(b.getAttribute('data-top-edit'))); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-top-del]'), function (b) {
+    b.addEventListener('click', async function () {
+      var t = toppingPorCodigo(b.getAttribute('data-top-del'));
+      if (!confirm('¿Eliminar el tope «' + ((t && t.nombre) || '') + '»?')) return;
+      try {
+        await API.eliminarTopping(b.getAttribute('data-top-del'));
+        _promTop = null; await cargarToppings();
+        toast('Tope eliminado 🗑', 'ok');
+        modalToppings();
+      } catch (e) { toast((e && e.message) || 'No se pudo eliminar', 'error'); }
+    });
+  });
+}
+
+function formularioTopping(t) {
+  var ed = !!t;
+  var t0 = t || { codigo: '', nombre: '', tipo: 'adicional', precio_usd: 0.5, activo: 1 };
+  abrirModal(
+    '<div class="modal-tope"><h3>' + (ed ? '✏️ Editar tope' : '＋ Nuevo tope') + '</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+    '<div id="t-error" class="aviso aviso-error" style="display:none"></div>' +
+    '<label class="campo">Código</label><input id="t-cod" value="' + esc(t0.codigo) + '"' + (ed ? ' disabled' : '') + ' placeholder="TOP-...">' +
+    '<label class="campo">Nombre</label><input id="t-nom" value="' + esc(t0.nombre) + '" placeholder="Lluvia de chocolate">' +
+    '<label class="campo">Tipo</label><select id="t-tipo">' +
+      '<option value="incluido"' + (String(t0.tipo) === 'incluido' ? ' selected' : '') + '>Clásico (incluido, gratis)</option>' +
+      '<option value="adicional"' + (String(t0.tipo) !== 'incluido' ? ' selected' : '') + '>Adicional (+ precio)</option>' +
+    '</select>' +
+    '<div id="t-precio-wrap"><label class="campo">Precio adicional ($)</label><input id="t-precio" type="number" min="0" step="0.01" value="' + num(t0.precio_usd) + '"></div>' +
+    '<div class="modal-acciones">' +
+      '<button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
+      '<button class="btn btn-primario" id="t-guardar">Guardar</button>' +
+    '</div>'
+  );
+  function refrescarPrecio() {
+    var w = el('t-precio-wrap');
+    if (w) w.style.display = (el('t-tipo').value === 'incluido') ? 'none' : '';
+  }
+  refrescarPrecio();
+  el('t-tipo').addEventListener('change', refrescarPrecio);
+  el('t-guardar').addEventListener('click', async function () {
+    var eb = el('t-error'); if (eb) { eb.style.display = 'none'; eb.textContent = ''; }
+    var t2 = {
+      codigo: el('t-cod').value.trim(),
+      nombre: el('t-nom').value.trim(),
+      tipo: el('t-tipo').value,
+      precio_usd: num(el('t-precio').value),
+      activo: 1
+    };
+    if (!t2.codigo || !t2.nombre) {
+      if (eb) { eb.textContent = '⚠️ Escribe el código y el nombre.'; eb.style.display = 'block'; }
+      return;
+    }
+    try {
+      await API.guardarTopping(t2);
+      _promTop = null; await cargarToppings();
+      toast('Tope guardado 🍫', 'ok');
+      modalToppings();
+    } catch (e) {
+      var M = (e && e.message) || 'No se pudo guardar.';
+      if (eb) { eb.textContent = '⚠️ ' + M; eb.style.display = 'block'; }
+      toast(M, 'error');
+    }
+  });
+}
+
+/* Selector de topes reutilizable (se usa al tomar un pedido). onOk(codigos[]). */
+function elegirTopes(prod, iniciales, onOk) {
+  var info = topesDisponibles(prod);
+  if (!info.incluidos.length && !info.adicionales.length) { onOk([]); return; }
+  var sel = (iniciales || []).slice();
+  function contIncluidos() {
+    return sel.filter(function (c) { var t = toppingPorCodigo(c); return t && String(t.tipo) === 'incluido'; });
+  }
+  function casilla(t, esInc) {
+    var marcado = sel.indexOf(String(t.codigo)) >= 0;
+    return '<label class="campo" style="display:flex;align-items:center;gap:8px;padding:4px 0">' +
+      '<input type="checkbox" data-top-pick="' + esc(t.codigo) + '" style="width:auto"' + (marcado ? ' checked' : '') + '>' +
+      '<span>' + esc(t.nombre) + (esInc ? ' <span class="muted">(incluido)</span>' : ' <b>+ ' + fmtUSD(t.precio_usd) + '</b>') + '</span>' +
+      '</label>';
+  }
+  abrirModal(
+    '<div class="modal-tope"><h3>🍫 Topes para «' + esc(prod.nombre) + '»</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+    (info.incluidos.length
+      ? '<p class="muted" style="margin-top:0">Elige hasta <b>' + info.max + '</b> clásico(s) incluido(s) sin costo.</p><div class="detalle-venta">' + info.incluidos.map(function (t) { return casilla(t, true); }).join('') + '</div>'
+      : '') +
+    (info.adicionales.length
+      ? '<p class="muted" style="margin:10px 0 0">Adicionales (+ precio por unidad):</p><div class="detalle-venta">' + info.adicionales.map(function (t) { return casilla(t, false); }).join('') + '</div>'
+      : '') +
+    '<div id="top-pick-msg" class="aviso aviso-error" style="display:none;margin-top:8px"></div>' +
+    '<div class="modal-acciones"><button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
+    '<button class="btn btn-primario" id="top-pick-ok">Aplicar topes</button></div>'
+  );
+  Array.prototype.forEach.call(document.querySelectorAll('[data-top-pick]'), function (cb) {
+    cb.addEventListener('change', function () {
+      var cod = cb.getAttribute('data-top-pick');
+      if (cb.checked) { if (sel.indexOf(cod) < 0) sel.push(cod); }
+      else sel = sel.filter(function (x) { return x !== cod; });
+      var msg = el('top-pick-msg');
+      if (msg) {
+        if (info.max && contIncluidos().length > info.max) { msg.textContent = 'Solo puedes elegir ' + info.max + ' clásico(s) como incluidos.'; msg.style.display = 'block'; }
+        else { msg.style.display = 'none'; }
+      }
+    });
+  });
+  el('top-pick-ok').addEventListener('click', function () {
+    if (info.max && contIncluidos().length > info.max) { toast('Solo puedes elegir ' + info.max + ' clásico(s)', 'error'); return; }
+    cerrarModal();
+    onOk(sel);
   });
 }
 
@@ -4045,7 +4275,9 @@ function cardPedido(p) {
       '</span>' +
     '</div>' +
     '<div class="ped-items">' + (items.length ? items.map(function (it) {
-      return '<div class="ped-linea"><span>' + fmtCant(it.cantidad) + '× ' + esc(it.nombre || '') + '</span><span class="mono">' + fmtUSD(it.sub_usd) + '</span></div>';
+      var tp = (it.topes_incluidos || []).concat(it.topes_adicionales || []).map(function (t) { return t.nombre; }).filter(Boolean);
+      var tpTxt = tp.length ? '<div class="muted" style="font-size:12px;padding-left:14px">🍫 ' + esc(tp.join(', ')) + '</div>' : '';
+      return '<div class="ped-linea"><span>' + fmtCant(it.cantidad) + '× ' + esc(it.nombre || '') + '</span><span class="mono">' + fmtUSD(it.sub_usd) + '</span></div>' + tpTxt;
     }).join('') : '<i class="muted">Sin detalle</i>') + '</div>' +
     (p.nota ? '<div class="ped-nota muted">📝 ' + esc(p.nota) + '</div>' : '') +
     '<div class="ped-pie">' +
@@ -4059,13 +4291,18 @@ function cardPedido(p) {
 
 /* ---------- Tomar un pedido desde la app (empleado o admin) ---------- */
 var _pedCarrito = [];
-function formularioPedido() {
+var _pedDisp = null; // codigo -> unidades disponibles ahora (o null = sin límite)
+function lineaPedKey(cod, topes) {
+  return String(cod) + '|' + (topes || []).slice().sort().join(',');
+}
+async function formularioPedido() {
   _pedCarrito = [];
   if (!prods().length) {
     toast('Cargando productos…', 'ok');
-    cargarProductos().then(function () { formularioPedido(); });
-    return;
+    await cargarProductos();
   }
+  try { if (!toppings().length) await cargarToppings(); } catch (e) {}
+  try { _pedDisp = (await API.getDisponibilidad()) || {}; } catch (e) { _pedDisp = null; }
   abrirModal(
     '<div class="modal-tope"><h3>🛎️ Tomar pedido</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
     '<label class="campo">Nombre del cliente *</label><input id="pedc-nom" placeholder="ej: Ana · mesa 3 · para llevar" autocomplete="off">' +
@@ -4116,6 +4353,18 @@ function formularioPedido() {
   }
   _swP.addEventListener('change', refrescarPagoPed);
   refrescarPagoPed();
+  function dispDe(cod) {
+    if (!_pedDisp || !Object.prototype.hasOwnProperty.call(_pedDisp, String(cod))) return null;
+    return _pedDisp[String(cod)];
+  }
+  function enCarro(cod) {
+    return _pedCarrito.reduce(function (s, l) { return s + (String(l.codigo) === String(cod) ? l.cantidad : 0); }, 0);
+  }
+  function restante(cod) {
+    var d = dispDe(cod);
+    if (d === null) return Infinity;
+    return Math.max(0, d - enCarro(cod));
+  }
   function pintarLista() {
     var q = (el('pedc-bus').value || '').trim().toLowerCase();
     var list = prods().filter(function (p) {
@@ -4123,10 +4372,18 @@ function formularioPedido() {
     }).slice(0, 24);
     var box = el('pedc-lista');
     box.innerHTML = list.map(function (p) {
+      var d = dispDe(p.codigo);
+      var disp = '';
+      if (d !== null) {
+        disp = d <= 0
+          ? ' · <span class="baja">agotado</span>'
+          : (d <= 5 ? ' · <span class="baja">quedan ' + d + '</span>' : ' · <span class="muted">quedan ' + d + '</span>');
+      }
+      var puede = restante(p.codigo) > 0;
       return '<div class="pedc-item">' +
         '<div class="pi-nom"><span class="prod-emoji">' + emojiDeProducto(p) + '</span>' + esc(p.nombre) + '</div>' +
-        '<div class="pi-precio mono">' + fmtUSD(p.precio_usd) + '</div>' +
-        '<button class="btn btn-suave" data-add="' + esc(p.codigo) + '">＋</button>' +
+        '<div class="pi-precio mono">' + fmtUSD(p.precio_usd) + disp + '</div>' +
+        '<button class="btn btn-suave" data-add="' + esc(p.codigo) + '"' + (puede ? '' : ' disabled') + '>＋</button>' +
       '</div>';
     }).join('') || '<p class="muted">Sin productos.</p>';
     Array.prototype.forEach.call(box.querySelectorAll('[data-add]'), function (b) {
@@ -4136,14 +4393,19 @@ function formularioPedido() {
   function pintarCarro() {
     var box = el('pedc-carro');
     if (!_pedCarrito.length) { box.innerHTML = '<p class="muted" style="margin:6px 0">Aún no has agregado productos.</p>'; return; }
-    var tot = _pedCarrito.reduce(function (s, l) { return s + l.precio_usd * l.cantidad; }, 0);
+    var tot = _pedCarrito.reduce(function (s, l) { return s + (l.precio_usd + totalExtrasToppings(l.topes)) * l.cantidad; }, 0);
     box.innerHTML = _pedCarrito.map(function (l, i) {
-      return '<div class="pedc-linea">' +
-        '<span class="pl-nom">' + esc(l.nombre) + '</span>' +
+      var extras = totalExtrasToppings(l.topes);
+      var topesTxt = l.topes.length
+        ? '<div class="muted" style="font-size:12px">🍫 ' + esc(nombresToppings(l.topes)) + (extras ? ' · +' + fmtUSD(extras) + '/u' : '') + '</div>'
+        : '';
+      return '<div class="pedc-linea" style="flex-wrap:wrap">' +
+        '<span class="pl-nom">' + esc(l.nombre) + topesTxt + '</span>' +
         '<span class="cnt"><button class="cnt-btn" data-pp="-1" data-i="' + i + '">−</button>' +
         '<span>' + fmtCant(l.cantidad) + '</span>' +
         '<button class="cnt-btn" data-pp="1" data-i="' + i + '">+</button></span>' +
-        '<span class="mono der" style="min-width:70px">' + fmtUSD(l.precio_usd * l.cantidad) + '</span>' +
+        '<button class="btn btn-suave" data-top="' + i + '" type="button" title="Elegir topes">🍫</button>' +
+        '<span class="mono der" style="min-width:70px">' + fmtUSD((l.precio_usd + extras) * l.cantidad) + '</span>' +
       '</div>';
     }).join('') +
     '<div class="pedc-total">Total: <b>' + fmtUSD(tot) + '</b> <small class="muted">/ ' + fmtVES(tot * (S.tasa || 0)) + '</small></div>';
@@ -4152,19 +4414,58 @@ function formularioPedido() {
         var i = num(b.getAttribute('data-i'));
         var d = num(b.getAttribute('data-pp'));
         if (!_pedCarrito[i]) return;
+        if (d > 0 && restante(_pedCarrito[i].codigo) <= 0) {
+          toast('No hay más «' + _pedCarrito[i].nombre + '» disponibles', 'error');
+          return;
+        }
         _pedCarrito[i].cantidad += d;
         if (_pedCarrito[i].cantidad <= 0) _pedCarrito.splice(i, 1);
-        pintarCarro();
+        pintarCarro(); pintarLista();
       });
     });
+    Array.prototype.forEach.call(box.querySelectorAll('[data-top]'), function (b) {
+      b.addEventListener('click', function () {
+        var l = _pedCarrito[num(b.getAttribute('data-top'))];
+        if (!l) return;
+        var p = prods().find(function (x) { return String(x.codigo) === String(l.codigo); });
+        if (!p) return;
+        elegirTopes(p, l.topes, function (sel) {
+          l.topes = sel;
+          var nuevokey = lineaPedKey(l.codigo, sel);
+          for (var j = _pedCarrito.length - 1; j >= 0; j--) {
+            if (_pedCarrito[j] !== l && _pedCarrito[j].key === nuevokey) {
+              l.cantidad += _pedCarrito[j].cantidad;
+              _pedCarrito.splice(j, 1);
+            }
+          }
+          l.key = nuevokey;
+          pintarCarro();
+        });
+      });
+    });
+  }
+  function agregarLinea(p, topes) {
+    var rest = restante(p.codigo);
+    if (rest <= 0) {
+      var d = dispDe(p.codigo);
+      toast('No hay más «' + p.nombre + '» disponibles' + (d === null ? '' : ' (quedan ' + Math.max(0, d) + ')'), 'error');
+      return;
+    }
+    var key = lineaPedKey(p.codigo, topes);
+    var l = _pedCarrito.find(function (x) { return x.key === key; });
+    if (l) l.cantidad += 1;
+    else _pedCarrito.push({ key: key, codigo: p.codigo, nombre: p.nombre, precio_usd: num(p.precio_usd), cantidad: 1, topes: (topes || []).slice() });
+    pintarCarro(); pintarLista();
   }
   function agregarAlPedido(cod) {
     var p = prods().find(function (x) { return String(x.codigo) === cod; });
     if (!p) return;
-    var l = _pedCarrito.find(function (x) { return String(x.codigo) === cod; });
-    if (l) l.cantidad += 1;
-    else _pedCarrito.push({ codigo: p.codigo, nombre: p.nombre, precio_usd: num(p.precio_usd), cantidad: 1 });
-    pintarCarro();
+    var info = topesDisponibles(p);
+    if (info.incluidos.length || info.adicionales.length) {
+      elegirTopes(p, [], function (sel) { agregarLinea(p, sel); });
+    } else {
+      agregarLinea(p, []);
+    }
   }
   el('pedc-bus').addEventListener('input', pintarLista);
   async function registrarPedido(despachar) {
@@ -4183,7 +4484,7 @@ function formularioPedido() {
         modalidad: _pedModo,
         metodo_pago: _pedPago,
         referencia: (_pedPago === 'pago_movil') ? (el('pedc-ref').value || '').trim() : '',
-        items: _pedCarrito.map(function (l) { return { codigo: l.codigo, cantidad: l.cantidad }; })
+        items: _pedCarrito.map(function (l) { return { codigo: l.codigo, cantidad: l.cantidad, topes: l.topes || [] }; })
       });
       var id = r && r.pedido && r.pedido.id;
       var nro = (r && r.pedido && r.pedido.numero) ? r.pedido.numero : '';
