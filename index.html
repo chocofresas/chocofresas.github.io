@@ -491,6 +491,10 @@
   .fila-entre { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .detalle-venta { font-size: 13px; }
   .detalle-venta .d-lin { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px dotted var(--borde); }
+  /* Selector de topes/toppings (al tomar un pedido): filas centradas */
+  .tope-fila { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 0; font-size: 13px; font-weight: 600; color: var(--texto-suave); cursor: pointer; }
+  .tope-fila span { text-align: center; }
+  .tope-fila input[type="checkbox"] { width: auto; height: auto; padding: 0; margin: 0; border: 0; border-radius: 4px; background: none; box-shadow: none; flex: none; accent-color: var(--prim); }
 
   .toast {
     position: fixed; left: 50%; bottom: calc(30px + env(safe-area-inset-bottom)); z-index: 80;
@@ -4089,8 +4093,8 @@ function elegirTopes(prod, iniciales, onOk) {
   }
   function casilla(t, esInc) {
     var marcado = sel.indexOf(String(t.codigo)) >= 0;
-    return '<label class="campo" style="display:flex;align-items:center;gap:8px;padding:4px 0">' +
-      '<input type="checkbox" data-top-pick="' + esc(t.codigo) + '" style="width:auto"' + (marcado ? ' checked' : '') + '>' +
+    return '<label class="tope-fila">' +
+      '<input type="checkbox" data-top-pick="' + esc(t.codigo) + '"' + (marcado ? ' checked' : '') + '>' +
       '<span>' + esc(t.nombre) + (esInc ? ' <span class="muted">(incluido)</span>' : ' <b>+ ' + fmtUSD(t.precio_usd) + '</b>') + '</span>' +
       '</label>';
   }
